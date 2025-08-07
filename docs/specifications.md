@@ -1,5 +1,12 @@
 # Wazuh SIEM Deployment Specifications
 
+<div align="center">
+  <img src="../assets/icons/wazuh.svg" alt="Wazuh SIEM" width="100" />
+  <img src="../assets/icons/opentofu.svg" alt="OpenTofu" width="100" />
+  <br/>
+  <img src="../assets/icons/entry-level.svg" alt="Entry Level" width="200" />
+</div>
+
 ## Overview
 This document outlines the specifications for deploying Wazuh SIEM using OpenTofu (formerly Terraform) and Kubernetes on a Fedora Atomic hypervisor. The deployment is designed for local environments, not cloud-based deployments.
 

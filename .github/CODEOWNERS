@@ -1,0 +1,11 @@
+# Default owners for everything in the repo
+* @RyansOpenSauceRice
+
+# Terraform configuration owners
+/terraform/ @RyansOpenSauceRice
+
+# Documentation owners
+/docs/ @RyansOpenSauceRice
+
+# GitHub Actions workflow owners
+/.github/ @RyansOpenSauceRice

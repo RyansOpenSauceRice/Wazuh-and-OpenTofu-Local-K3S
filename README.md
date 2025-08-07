@@ -1,5 +1,12 @@
 # Wazuh and OpenTofu with Kustomize
 
+<div align="center">
+  <img src="assets/icons/wazuh.svg" alt="Wazuh SIEM" width="100" />
+  <img src="assets/icons/opentofu.svg" alt="OpenTofu" width="100" />
+  <br/>
+  <img src="assets/icons/entry-level.svg" alt="Entry Level" width="200" />
+</div>
+
 This repository contains OpenTofu (formerly Terraform) configurations to deploy Wazuh SIEM on a local Kubernetes cluster running on Fedora Atomic hypervisor using Kustomize.
 
 ## Prerequisites
