@@ -1,11 +1,11 @@
 # Wazuh SIEM Deployment Specifications
 
-<div align="center">
-  <img src="../assets/icons/wazuh.svg" alt="Wazuh SIEM" width="100" />
-  <img src="../assets/icons/opentofu.svg" alt="OpenTofu" width="100" />
-  <br/>
-  <img src="../assets/icons/entry-level.svg" alt="Entry Level" width="200" />
-</div>
+[![SIEM: Wazuh](https://img.shields.io/badge/SIEM-Wazuh-blue.svg)](https://wazuh.com/)
+[![IaC: OpenTofu](https://img.shields.io/badge/IaC-OpenTofu-844FBA.svg)](https://opentofu.org/)
+[![Orchestration: Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes-326CE5.svg)](https://kubernetes.io/)
+[![Config: Helm](https://img.shields.io/badge/Config-Helm-0F1689.svg)](https://helm.sh/)
+[![Status: Development](https://img.shields.io/badge/Status-Development-yellow.svg)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm)
+[![Level: Entry](https://img.shields.io/badge/Level-Entry-green.svg)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm)
 
 ## Overview
 This document outlines the specifications for deploying Wazuh SIEM using OpenTofu (formerly Terraform) and Kubernetes on a Fedora Atomic hypervisor. The deployment is designed for local environments, not cloud-based deployments.
