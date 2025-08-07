@@ -10,7 +10,8 @@
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue?style=for-the-badge)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-Local-K3S/blob/main/LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-green?style=for-the-badge)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm/tree/main/docs)
 
-This repository contains OpenTofu (formerly Terraform) configurations to deploy Wazuh SIEM on a local Kubernetes cluster running on Fedora Atomic hypervisor using Kustomize.
+This repository contains OpenTofu (formerly Terraform) configurations to deploy Wazuh SIEM on a local
+Kubernetes cluster running on Fedora Atomic hypervisor using Kustomize.
 
 ## Prerequisites
 
@@ -22,7 +23,7 @@ This repository contains OpenTofu (formerly Terraform) configurations to deploy 
 
 ## Repository Structure
 
-```
+```text
 .
 ├── docs/
 │   └── specifications.md       # Detailed specifications document
@@ -100,6 +101,7 @@ tofu apply wazuh.plan
 ```
 
 The deployment process will:
+
 1. Create a Kubernetes namespace for Wazuh
 2. Clone the official Wazuh Kubernetes repository
 3. Configure Kustomize files for local deployment
@@ -115,6 +117,7 @@ tofu output access_instructions
 ```
 
 This will provide you with:
+
 - Commands to port-forward the Wazuh dashboard service
 - URL to access the dashboard
 - Credentials for the dashboard
@@ -145,6 +148,7 @@ For detailed specifications and architecture information, see [specifications.md
 ### Linting
 
 This repository uses automated linting for:
+
 - Markdown files
 - OpenTofu (Terraform) files
 - Shell scripts
