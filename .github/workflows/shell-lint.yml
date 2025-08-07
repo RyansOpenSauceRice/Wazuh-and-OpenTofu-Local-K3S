@@ -1,0 +1,25 @@
+name: Shell Script Lint
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '**/*.sh'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '**/*.sh'
+
+jobs:
+  shell-lint:
+    name: Shell Script Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Run ShellCheck
+      uses: ludeeus/action-shellcheck@master
+      with:
+        severity: warning

@@ -1,0 +1,22 @@
+name: Branch Protection
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/branch-protection.yml'
+
+jobs:
+  branch-protection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure branch protection
+        uses: relaxdiego/github-branch-protection-bot@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          branch-protection-config: .github/branch-protection.yml

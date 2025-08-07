@@ -1,0 +1,50 @@
+name: OpenTofu Lint
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
+
+jobs:
+  terraform-lint:
+    name: OpenTofu Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup OpenTofu
+      uses: opentofu/setup-opentofu@v1
+      with:
+        tofu_version: 1.6.0
+        
+    - name: Init OpenTofu
+      run: |
+        cd terraform
+        tofu init -backend=false
+        
+    - name: Format check
+      run: |
+        cd terraform
+        tofu fmt -check -recursive
+        
+    - name: Validate
+      run: |
+        cd terraform
+        tofu validate
+        
+    - name: Setup TFLint
+      uses: terraform-linters/setup-tflint@v3
+      with:
+        tflint_version: v0.47.0
+        
+    - name: Run TFLint
+      run: |
+        cd terraform
+        tflint --config=../.tflint.hcl
