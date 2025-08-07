@@ -25,7 +25,7 @@ output "wazuh_indexer_service" {
 
 output "dashboard_credentials" {
   description = "Credentials for Wazuh dashboard"
-  value       = {
+  value = {
     username = "admin"
     password = random_password.dashboard_admin_password.result
   }
@@ -34,7 +34,7 @@ output "dashboard_credentials" {
 
 output "api_credentials" {
   description = "Credentials for Wazuh API"
-  value       = {
+  value = {
     username = "wazuh-api"
     password = random_password.wazuh_api_password.result
   }
@@ -68,5 +68,5 @@ output "access_instructions" {
        Username: wazuh-api
        Password: ${random_password.wazuh_api_password.result}
   EOT
-  sensitive = true
+  sensitive   = true
 }
