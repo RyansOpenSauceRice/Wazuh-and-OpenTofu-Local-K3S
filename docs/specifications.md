@@ -3,7 +3,7 @@
 [![SIEM](https://img.shields.io/badge/SIEM-Wazuh-blue?style=for-the-badge&logo=wazuh)](https://wazuh.com/)
 [![IaC](https://img.shields.io/badge/IaC-OpenTofu-844FBA?style=for-the-badge&logo=terraform)](https://opentofu.org/)
 [![Orchestration](https://img.shields.io/badge/orchestration-Kubernetes-326CE5?style=for-the-badge&logo=kubernetes)](https://kubernetes.io/)
-[![Config](https://img.shields.io/badge/config-Helm-0F1689?style=for-the-badge&logo=helm)](https://helm.sh/)
+[![Config](https://img.shields.io/badge/config-Kustomize-3970E4?style=for-the-badge&logo=kubernetes)](https://kustomize.io/)
 [![Platform](https://img.shields.io/badge/platform-Fedora%20Atomic-294172?style=for-the-badge&logo=fedora)](https://fedoraproject.org/atomic/)
 [![Status](https://img.shields.io/badge/status-development-yellow?style=for-the-badge&logo=github)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm)
 [![Level](https://img.shields.io/badge/level-entry-green?style=for-the-badge)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm)
