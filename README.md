@@ -53,6 +53,7 @@ chmod +x setup.sh
 ```
 
 The setup script will:
+
 1. Check and install required dependencies (kubectl, OpenTofu, Git, OpenSSL)
 2. Set up or detect an existing K3s cluster
 3. Configure kubectl to access your cluster
@@ -197,17 +198,19 @@ Example port-forwarding command:
 sudo kubectl port-forward -n wazuh svc/wazuh-dashboard 5601:5601
 ```
 
-Then access the dashboard at: https://localhost:5601
+Then access the dashboard at: <https://localhost:5601>
 
 ## Troubleshooting
 
-If you encounter any issues during setup or deployment, please refer to the [TROUBLESHOOTING.md](TROUBLESHOOTING.md) guide for common solutions.
+If you encounter any issues during setup or deployment, please refer to the [TROUBLESHOOTING.md](TROUBLESHOOTING.md)  
+guide for common solutions.
 
 Common issues include:
+
 - Permission denied when accessing K3s configuration
 - OpenSSL not found during certificate generation
 - Kubernetes pods failing to start
-- Package manager not found on Fedora Atomic/CoreOS
+- Package manager not found on Fedora Atomic/CoreOS systems
 
 ## Customization
 

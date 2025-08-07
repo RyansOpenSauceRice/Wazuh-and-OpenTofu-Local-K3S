@@ -12,7 +12,7 @@ echo "This script will help you set up the necessary components for deploying Wa
 install_package() {
     local package_name=$1
     echo "Installing $package_name..."
-    
+
     if command -v apt-get &> /dev/null; then
         sudo apt-get update && sudo apt-get install -y "$package_name"
     elif command -v dnf &> /dev/null; then
@@ -26,17 +26,18 @@ install_package() {
         echo "WARNING: Could not determine package manager. Please install $package_name manually."
         return 1
     fi
-    
+
     return 0
 }
 
 # Check if running on Fedora Atomic
 if [ -f /etc/os-release ]; then
+    # shellcheck source=/dev/null
     . /etc/os-release
     echo "Detected OS: $PRETTY_NAME"
     if [[ "$ID" != "fedora-coreos" && "$ID" != "fedora" ]]; then
         echo "Warning: This script is designed for Fedora Atomic. You are running $PRETTY_NAME."
-        read -p "Do you want to continue anyway? (y/n): " continue_anyway
+        read -r -p "Do you want to continue anyway? (y/n): " continue_anyway
         if [[ "$continue_anyway" != "y" && "$continue_anyway" != "Y" ]]; then
             echo "Exiting."
             exit 1
@@ -51,7 +52,7 @@ echo "Checking for required tools..."
 if ! command -v openssl &> /dev/null; then
     echo "OpenSSL not found. This is required for certificate generation."
     install_package "openssl"
-    
+
     # Verify installation
     if ! command -v openssl &> /dev/null; then
         echo "ERROR: Failed to install OpenSSL. Please install it manually and run this script again."
@@ -94,33 +95,33 @@ fi
 # Check if kubectl can access the cluster
 if ! kubectl cluster-info &> /dev/null; then
     echo "Kubernetes cluster not found or not accessible."
-    
+
     # If k3s is running but kubectl can't access it, it's likely a permission issue
     if [ "$K3S_RUNNING" = true ]; then
         echo "K3s is running but kubectl cannot access it. This is likely a permission issue."
         echo "Fixing permissions for k3s.yaml..."
-        
+
         # Fix permissions for k3s.yaml
         sudo chmod 644 /etc/rancher/k3s/k3s.yaml
-        
+
         # Configure kubectl to use k3s.yaml
         mkdir -p ~/.kube
         sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
-        sudo chown $(id -u):$(id -g) ~/.kube/config
+        sudo chown "$(id -u)":"$(id -g)" ~/.kube/config
         chmod 600 ~/.kube/config
         export KUBECONFIG=~/.kube/config
-        
+
         # Create a symlink to /tmp/kubeconfig for compatibility with the Terraform config
         sudo mkdir -p /tmp
         sudo ln -sf ~/.kube/config /tmp/kubeconfig
-        
+
         echo "kubectl configured to use k3s. Testing connection..."
         if kubectl cluster-info &> /dev/null; then
             echo "Successfully connected to Kubernetes cluster."
         else
             echo "Still unable to connect to Kubernetes cluster."
             echo "Would you like to restart k3s with proper permissions?"
-            read -p "Restart k3s with proper permissions? (y/n): " restart_k3s
+            read -r -p "Restart k3s with proper permissions? (y/n): " restart_k3s
             if [[ "$restart_k3s" == "y" || "$restart_k3s" == "Y" ]]; then
                 echo "Configuring k3s to use proper permissions..."
                 sudo mkdir -p /etc/systemd/system/k3s.service.d/
@@ -132,7 +133,7 @@ EOF
                 sudo systemctl daemon-reload
                 sudo systemctl restart k3s
                 sleep 10
-                
+
                 # Try again with the new permissions
                 if kubectl cluster-info &> /dev/null; then
                     echo "Successfully connected to Kubernetes cluster after restart."
@@ -148,28 +149,28 @@ EOF
     else
         # If k3s is not running, offer to install it
         echo "Would you like to install k3s (a lightweight Kubernetes distribution)?"
-        read -p "Install k3s? (y/n): " install_k3s
+        read -r -p "Install k3s? (y/n): " install_k3s
         if [[ "$install_k3s" == "y" || "$install_k3s" == "Y" ]]; then
             echo "Installing k3s with proper permissions..."
             curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644" sh -
-            
+
             # Wait for k3s to start
             echo "Waiting for k3s to start..."
             sleep 15
-            
+
             # Configure kubectl
             mkdir -p ~/.kube
             sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
-            sudo chown $(id -u):$(id -g) ~/.kube/config
+            sudo chown "$(id -u)":"$(id -g)" ~/.kube/config
             chmod 600 ~/.kube/config
             export KUBECONFIG=~/.kube/config
-            
+
             # Create a symlink to /tmp/kubeconfig for compatibility with the Terraform config
             sudo mkdir -p /tmp
             sudo ln -sf ~/.kube/config /tmp/kubeconfig
-            
+
             echo "k3s installed and kubectl configured."
-            
+
             # Verify connection
             if kubectl cluster-info &> /dev/null; then
                 echo "Successfully connected to Kubernetes cluster."
@@ -184,7 +185,7 @@ EOF
     fi
 else
     echo "Kubernetes cluster is accessible."
-    
+
     # Create a symlink to /tmp/kubeconfig for compatibility with the Terraform config
     echo "Creating symlink to kubeconfig for Terraform compatibility..."
     sudo mkdir -p /tmp
@@ -213,7 +214,7 @@ if ! command -v tofu &> /dev/null; then
     chmod +x install-opentofu.sh
     sudo ./install-opentofu.sh --install-method standalone
     rm install-opentofu.sh
-    
+
     # Verify installation
     if ! command -v tofu &> /dev/null; then
         echo "ERROR: Failed to install OpenTofu. Please install it manually and run this script again."
@@ -229,7 +230,7 @@ fi
 if ! command -v git &> /dev/null; then
     echo "Git not found. Installing..."
     install_package "git"
-    
+
     # Verify installation
     if ! command -v git &> /dev/null; then
         echo "ERROR: Failed to install Git. Please install it manually and run this script again."
@@ -258,7 +259,7 @@ VARIABLES_FILE="$SCRIPT_DIR/terraform/variables.tf"
 if [ -f "$VARIABLES_FILE" ]; then
     # Backup the original file
     cp "$VARIABLES_FILE" "$VARIABLES_FILE.bak"
-    
+
     # Update the kubeconfig path
     if grep -q "kube_config_path" "$VARIABLES_FILE"; then
         sed -i 's|default     = "/tmp/kubeconfig"|default     = "~/.kube/config"|g' "$VARIABLES_FILE"
