@@ -137,6 +137,23 @@ tofu destroy
 
 For detailed specifications and architecture information, see [specifications.md](docs/specifications.md).
 
+## Development
+
+### Linting
+
+This repository uses automated linting for:
+- Markdown files
+- OpenTofu (Terraform) files
+- Shell scripts
+
+To fix linting errors locally before committing, run:
+
+```bash
+./scripts/fix-lint-errors.sh
+```
+
+See [scripts/README.md](scripts/README.md) for more information about utility scripts.
+
 ## References
 
 - [Wazuh Documentation](https://documentation.wazuh.com/)
