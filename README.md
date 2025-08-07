@@ -1,11 +1,14 @@
 # Wazuh and OpenTofu with Helm
 
-[![SIEM: Wazuh](https://img.shields.io/badge/SIEM-Wazuh-blue.svg)](https://wazuh.com/)
-[![IaC: OpenTofu](https://img.shields.io/badge/IaC-OpenTofu-844FBA.svg)](https://opentofu.org/)
-[![Orchestration: Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes-326CE5.svg)](https://kubernetes.io/)
-[![Config: Helm](https://img.shields.io/badge/Config-Helm-0F1689.svg)](https://helm.sh/)
-[![Status: Development](https://img.shields.io/badge/Status-Development-yellow.svg)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm)
-[![Level: Entry](https://img.shields.io/badge/Level-Entry-green.svg)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm)
+[![SIEM](https://img.shields.io/badge/SIEM-Wazuh-blue?style=for-the-badge&logo=wazuh)](https://wazuh.com/)
+[![IaC](https://img.shields.io/badge/IaC-OpenTofu-844FBA?style=for-the-badge&logo=terraform)](https://opentofu.org/)
+[![Orchestration](https://img.shields.io/badge/orchestration-Kubernetes-326CE5?style=for-the-badge&logo=kubernetes)](https://kubernetes.io/)
+[![Config](https://img.shields.io/badge/config-Helm-0F1689?style=for-the-badge&logo=helm)](https://helm.sh/)
+[![Platform](https://img.shields.io/badge/platform-Fedora%20Atomic-294172?style=for-the-badge&logo=fedora)](https://fedoraproject.org/atomic/)
+[![Status](https://img.shields.io/badge/status-development-yellow?style=for-the-badge&logo=github)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm)
+[![Level](https://img.shields.io/badge/level-entry-green?style=for-the-badge)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm)
+[![License](https://img.shields.io/github/license/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm?color=blue&style=for-the-badge)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm/blob/main/LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-markdown-green?style=for-the-badge&logo=markdown)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm/tree/main/docs)
 
 This repository contains OpenTofu (formerly Terraform) configurations to deploy Wazuh SIEM on a local Kubernetes cluster running on Fedora Atomic hypervisor using Helm charts.
 
