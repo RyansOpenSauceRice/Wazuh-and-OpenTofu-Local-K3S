@@ -1,13 +1,13 @@
-# Wazuh and OpenTofu with Helm
+# Wazuh and OpenTofu with Kustomize
 
-This repository contains OpenTofu (formerly Terraform) configurations to deploy Wazuh SIEM on a local Kubernetes cluster running on Fedora Atomic hypervisor using Helm charts.
+This repository contains OpenTofu (formerly Terraform) configurations to deploy Wazuh SIEM on a local Kubernetes cluster running on Fedora Atomic hypervisor using Kustomize.
 
 ## Prerequisites
 
 - Fedora Atomic hypervisor
 - Kubernetes cluster installed and configured
 - kubectl configured to access your cluster
-- Helm installed
+- Git installed
 - OpenTofu installed
 
 ## Repository Structure
@@ -16,12 +16,11 @@ This repository contains OpenTofu (formerly Terraform) configurations to deploy 
 .
 ├── docs/
 │   └── specifications.md       # Detailed specifications document
-├── helm_charts/
-│   └── wazuh-values.yaml       # Helm values for Wazuh deployment
 ├── terraform/
 │   ├── main.tf                 # Main OpenTofu configuration
 │   ├── variables.tf            # Variables definition
 │   └── outputs.tf              # Output definitions
+├── wazuh-kubernetes/           # Cloned Wazuh Kubernetes repository (created during setup)
 └── README.md                   # This file
 ```
 
@@ -50,10 +49,14 @@ sudo chown $(id -u):$(id -g) ~/.kube/config
 chmod 600 ~/.kube/config
 ```
 
-### 4. Install Helm
+### 4. Install Git
 
 ```bash
-curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+# For Fedora/RHEL-based systems
+sudo dnf install -y git
+
+# For Debian/Ubuntu-based systems
+# sudo apt-get update && sudo apt-get install -y git
 ```
 
 ### 5. Install OpenTofu
@@ -86,6 +89,13 @@ tofu plan -out=wazuh.plan
 tofu apply wazuh.plan
 ```
 
+The deployment process will:
+1. Create a Kubernetes namespace for Wazuh
+2. Clone the official Wazuh Kubernetes repository
+3. Configure Kustomize files for local deployment
+4. Generate certificates for Wazuh components
+5. Deploy Wazuh using Kustomize
+
 ### 4. Access Wazuh Dashboard
 
 After deployment, follow the instructions in the output to access the Wazuh dashboard:
@@ -94,12 +104,18 @@ After deployment, follow the instructions in the output to access the Wazuh dash
 tofu output access_instructions
 ```
 
+This will provide you with:
+- Commands to port-forward the Wazuh dashboard service
+- URL to access the dashboard
+- Credentials for the dashboard
+- Instructions for accessing the Wazuh API
+
 ## Customization
 
 You can customize the deployment by modifying the following files:
 
-- `terraform/variables.tf`: Adjust variables like storage size, namespace, etc.
-- `helm_charts/wazuh-values.yaml`: Customize Wazuh configuration
+- `terraform/variables.tf`: Adjust variables like resource limits, namespace, etc.
+- `terraform/main.tf`: Customize the Kustomize configuration
 
 ## Cleanup
 
@@ -117,7 +133,8 @@ For detailed specifications and architecture information, see [specifications.md
 ## References
 
 - [Wazuh Documentation](https://documentation.wazuh.com/)
+- [Wazuh Kubernetes Repository](https://github.com/wazuh/wazuh-kubernetes)
 - [OpenTofu Documentation](https://opentofu.org/docs/)
 - [Kubernetes Documentation](https://kubernetes.io/docs/home/)
-- [Helm Documentation](https://helm.sh/docs/)
+- [Kustomize Documentation](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/)
 - [Fedora Atomic Documentation](https://docs.fedoraproject.org/en-US/fedora-coreos/)

@@ -39,13 +39,18 @@ override.tf.json
 terraform.rc
 .tofurc
 
-# Kubernetes and Helm
+# Kubernetes, Kustomize, and certificates
 kubeconfig
 *.kubeconfig
 .kube/
 *.pem
 *.key
 *.crt
+*.p12
+kustomize
+.kustomize/
+kustomization.yml.bak
+wazuh-kubernetes/
 
 # OS specific files
 .DS_Store

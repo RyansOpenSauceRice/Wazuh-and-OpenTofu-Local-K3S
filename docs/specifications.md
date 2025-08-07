@@ -1,14 +1,16 @@
 # Wazuh SIEM Deployment Specifications
 
 ## Overview
-This document outlines the specifications for deploying Wazuh SIEM using OpenTofu (formerly Terraform), Kubernetes, and Helm on a Fedora Atomic hypervisor. The deployment is designed for local environments, not cloud-based deployments.
+This document outlines the specifications for deploying Wazuh SIEM using OpenTofu (formerly Terraform) and Kubernetes on a Fedora Atomic hypervisor. The deployment is designed for local environments, not cloud-based deployments.
+
+> **Note**: While the original plan was to use Helm charts for deployment, research shows that the official Wazuh Kubernetes deployment uses Kustomize rather than Helm. This specification has been updated to reflect the official deployment method.
 
 ## Architecture
 
 ### Infrastructure Components
 - **Hypervisor**: Fedora Atomic
 - **Container Orchestration**: Kubernetes (K8s)
-- **Package Management**: Helm
+- **Configuration Management**: Kustomize
 - **Infrastructure as Code**: OpenTofu
 - **SIEM Solution**: Wazuh
 
@@ -21,20 +23,20 @@ This document outlines the specifications for deploying Wazuh SIEM using OpenTof
    - Control Plane (single node for local deployment)
    - Worker Node(s) (can be scaled as needed)
 
-3. **Wazuh Components** (deployed via Helm)
-   - Wazuh Manager
-   - Wazuh Indexer (Elasticsearch)
-   - Wazuh Dashboard (Kibana)
+3. **Wazuh Components** (deployed via Kustomize)
+   - Wazuh Manager (Master and Workers)
+   - Wazuh Indexer (OpenSearch)
+   - Wazuh Dashboard (OpenSearch Dashboards)
    - Wazuh Agents (optional, for monitoring the host system)
 
 ## Technical Specifications
 
 ### OpenTofu Configuration
-- **Provider**: `kubernetes` and `helm`
+- **Provider**: `kubernetes` and `kubectl`
 - **Resources**:
   - Kubernetes namespace for Wazuh
   - Persistent volumes for data storage
-  - Helm release for Wazuh components
+  - Kustomize deployment for Wazuh components
 
 ### Kubernetes Requirements
 - Kubernetes version: 1.24+ (recommended)
@@ -68,8 +70,8 @@ This document outlines the specifications for deploying Wazuh SIEM using OpenTof
 
 ### Phase 2: Wazuh Deployment
 1. Create OpenTofu configuration for Kubernetes resources
-2. Configure Helm chart values for Wazuh
-3. Apply OpenTofu configuration to deploy Wazuh via Helm
+2. Configure Kustomize files for Wazuh deployment
+3. Apply OpenTofu configuration to deploy Wazuh via Kustomize
 
 ### Phase 3: Configuration and Validation
 1. Configure Wazuh for local environment monitoring
@@ -90,7 +92,8 @@ This document outlines the specifications for deploying Wazuh SIEM using OpenTof
 
 ## References
 - [Wazuh Documentation](https://documentation.wazuh.com/)
+- [Wazuh Kubernetes Repository](https://github.com/wazuh/wazuh-kubernetes)
 - [OpenTofu Documentation](https://opentofu.org/docs/)
 - [Kubernetes Documentation](https://kubernetes.io/docs/home/)
-- [Helm Documentation](https://helm.sh/docs/)
+- [Kustomize Documentation](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/)
 - [Fedora Atomic Documentation](https://docs.fedoraproject.org/en-US/fedora-coreos/)

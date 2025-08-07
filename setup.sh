@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Setup script for Wazuh SIEM deployment with OpenTofu and Helm on Fedora Atomic
+# Setup script for Wazuh SIEM deployment with OpenTofu and Kustomize on Fedora Atomic
 
 set -e
 
@@ -60,13 +60,19 @@ else
     echo "Kubernetes cluster is accessible."
 fi
 
-# Check for Helm
-if ! command -v helm &> /dev/null; then
-    echo "Helm not found. Installing..."
-    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-    echo "Helm installed."
+# Check for kustomize
+if ! kubectl kustomize --help &> /dev/null; then
+    echo "Kustomize not found in kubectl. Checking standalone installation..."
+    if ! command -v kustomize &> /dev/null; then
+        echo "Standalone kustomize not found. Installing..."
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+        sudo mv kustomize /usr/local/bin/
+        echo "Kustomize installed."
+    else
+        echo "Standalone kustomize is already installed."
+    fi
 else
-    echo "Helm is already installed."
+    echo "Kustomize is available through kubectl."
 fi
 
 # Check for OpenTofu
@@ -81,10 +87,32 @@ else
     echo "OpenTofu is already installed."
 fi
 
-# Add Wazuh Helm repository
-echo "Adding Wazuh Helm repository..."
-helm repo add wazuh https://wazuh.github.io/helm
-helm repo update
+# Check for git
+if ! command -v git &> /dev/null; then
+    echo "Git not found. Installing..."
+    if command -v apt-get &> /dev/null; then
+        sudo apt-get update && sudo apt-get install -y git
+    elif command -v dnf &> /dev/null; then
+        sudo dnf install -y git
+    elif command -v yum &> /dev/null; then
+        sudo yum install -y git
+    else
+        echo "Could not determine package manager. Please install git manually."
+        exit 1
+    fi
+    echo "Git installed."
+else
+    echo "Git is already installed."
+fi
+
+# Clone Wazuh Kubernetes repository
+echo "Cloning Wazuh Kubernetes repository..."
+if [ ! -d "../wazuh-kubernetes" ]; then
+    git clone https://github.com/wazuh/wazuh-kubernetes.git ../wazuh-kubernetes
+else
+    echo "Wazuh Kubernetes repository already exists. Updating..."
+    cd ../wazuh-kubernetes && git pull && cd -
+fi
 
 # Initialize OpenTofu
 echo "Initializing OpenTofu..."
