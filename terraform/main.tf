@@ -202,14 +202,14 @@ resource "null_resource" "customize_wazuh_kustomize" {
 # We ensure all prerequisites are met before deployment
 resource "null_resource" "deploy_wazuh" {
   depends_on = [
-    kubernetes_namespace.wazuh,                # Namespace must exist
-    kubernetes_storage_class.local_storage,    # Storage class for persistence
-    kubernetes_secret.wazuh_cluster_key,       # Secret for cluster communication
-    kubernetes_secret.wazuh_api_credentials,   # Secret for API access
-    kubernetes_secret.wazuh_authd_pass,        # Secret for agent registration
-    kubernetes_secret.indexer_credentials,     # Secret for Elasticsearch access
-    kubernetes_secret.dashboard_credentials,   # Secret for Kibana access
-    null_resource.customize_wazuh_kustomize    # Customization must be complete
+    kubernetes_namespace.wazuh,              # Namespace must exist
+    kubernetes_storage_class.local_storage,  # Storage class for persistence
+    kubernetes_secret.wazuh_cluster_key,     # Secret for cluster communication
+    kubernetes_secret.wazuh_api_credentials, # Secret for API access
+    kubernetes_secret.wazuh_authd_pass,      # Secret for agent registration
+    kubernetes_secret.indexer_credentials,   # Secret for Elasticsearch access
+    kubernetes_secret.dashboard_credentials, # Secret for Kibana access
+    null_resource.customize_wazuh_kustomize  # Customization must be complete
   ]
 
   provisioner "local-exec" {
