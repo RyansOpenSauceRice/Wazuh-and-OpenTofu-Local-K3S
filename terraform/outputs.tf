@@ -68,4 +68,5 @@ output "access_instructions" {
        Username: wazuh-api
        Password: ${random_password.wazuh_api_password.result}
   EOT
+  sensitive = true
 }
