@@ -205,11 +205,54 @@ Then access the dashboard at: <https://localhost:5601>
 If you encounter any issues during setup or deployment, please refer to the [TROUBLESHOOTING.md](TROUBLESHOOTING.md)  
 guide for common solutions.
 
+### Utility Scripts
+
+This repository includes several utility scripts to help with common tasks and troubleshooting:
+
+#### Fix Permissions Script
+
+If you encounter permission issues with OpenTofu or Kubernetes, run:
+
+```bash
+./scripts/fix-permissions.sh
+```
+
+This script will:
+- Fix permissions on the OpenTofu directory
+- Fix permissions on the kubeconfig file
+- Fix permissions on the Wazuh Kubernetes repository
+
+#### Kubernetes Validator
+
+To validate your Kubernetes configuration:
+
+```bash
+./scripts/utils/k8s_validator.sh
+```
+
+This script checks:
+- If kubectl is installed
+- If the Kubernetes cluster is accessible
+- If the necessary resources are available
+
+#### Path Resolver
+
+The path resolver utility helps with finding and validating paths:
+
+```bash
+./scripts/utils/path_resolver.sh
+```
+
+This script:
+- Creates a configuration file if it doesn't exist
+- Validates paths to important directories
+- Resolves the kubeconfig path
+
 Common issues include:
 
-- Permission denied when accessing K3s configuration
+- Permission denied when accessing K3s configuration (use `./scripts/fix-permissions.sh`)
 - OpenSSL not found during certificate generation
-- Kubernetes pods failing to start
+- Kubernetes pods failing to start (use `./scripts/utils/k8s_validator.sh`)
 - Package manager not found on Fedora Atomic/CoreOS systems
 
 ## Customization
