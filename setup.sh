@@ -1,15 +1,39 @@
 #!/bin/bash
 
 # Setup script for Wazuh SIEM deployment with OpenTofu and Kustomize on Fedora Atomic
+# Updated with improved error handling and compatibility
 
 set -e
 
 echo "=== Wazuh SIEM Deployment Setup ==="
 echo "This script will help you set up the necessary components for deploying Wazuh SIEM."
 
+# Function to detect and use the appropriate package manager
+install_package() {
+    local package_name=$1
+    echo "Installing $package_name..."
+    
+    if command -v apt-get &> /dev/null; then
+        sudo apt-get update && sudo apt-get install -y "$package_name"
+    elif command -v dnf &> /dev/null; then
+        sudo dnf install -y "$package_name"
+    elif command -v yum &> /dev/null; then
+        sudo yum install -y "$package_name"
+    elif command -v rpm-ostree &> /dev/null; then
+        sudo rpm-ostree install "$package_name"
+        echo "NOTE: You may need to reboot your system for the rpm-ostree changes to take effect."
+    else
+        echo "WARNING: Could not determine package manager. Please install $package_name manually."
+        return 1
+    fi
+    
+    return 0
+}
+
 # Check if running on Fedora Atomic
 if [ -f /etc/os-release ]; then
     . /etc/os-release
+    echo "Detected OS: $PRETTY_NAME"
     if [[ "$ID" != "fedora-coreos" && "$ID" != "fedora" ]]; then
         echo "Warning: This script is designed for Fedora Atomic. You are running $PRETTY_NAME."
         read -p "Do you want to continue anyway? (y/n): " continue_anyway
@@ -23,6 +47,20 @@ fi
 # Check for required tools
 echo "Checking for required tools..."
 
+# Check for OpenSSL (required for certificate generation)
+if ! command -v openssl &> /dev/null; then
+    echo "OpenSSL not found. This is required for certificate generation."
+    install_package "openssl"
+    
+    # Verify installation
+    if ! command -v openssl &> /dev/null; then
+        echo "ERROR: Failed to install OpenSSL. Please install it manually and run this script again."
+        exit 1
+    fi
+else
+    echo "OpenSSL is already installed."
+fi
+
 # Check for kubectl
 if ! command -v kubectl &> /dev/null; then
     echo "kubectl not found. Installing..."
@@ -34,30 +72,123 @@ else
     echo "kubectl is already installed."
 fi
 
-# Check for Kubernetes cluster
+# Check for Kubernetes cluster and handle k3s specifically
+K3S_RUNNING=false
+if systemctl is-active --quiet k3s; then
+    echo "K3s service is running."
+    K3S_RUNNING=true
+else
+    if systemctl list-unit-files | grep -q k3s.service; then
+        echo "K3s service exists but is not running. Attempting to start..."
+        sudo systemctl start k3s
+        sleep 10
+        if systemctl is-active --quiet k3s; then
+            echo "K3s service started successfully."
+            K3S_RUNNING=true
+        else
+            echo "Failed to start K3s service."
+        fi
+    fi
+fi
+
+# Check if kubectl can access the cluster
 if ! kubectl cluster-info &> /dev/null; then
     echo "Kubernetes cluster not found or not accessible."
-    echo "Would you like to install k3s (a lightweight Kubernetes distribution)?"
-    read -p "Install k3s? (y/n): " install_k3s
-    if [[ "$install_k3s" == "y" || "$install_k3s" == "Y" ]]; then
-        echo "Installing k3s..."
-        curl -sfL https://get.k3s.io | sh -
-        # Wait for k3s to start
-        echo "Waiting for k3s to start..."
-        sleep 10
-        # Configure kubectl
+    
+    # If k3s is running but kubectl can't access it, it's likely a permission issue
+    if [ "$K3S_RUNNING" = true ]; then
+        echo "K3s is running but kubectl cannot access it. This is likely a permission issue."
+        echo "Fixing permissions for k3s.yaml..."
+        
+        # Fix permissions for k3s.yaml
+        sudo chmod 644 /etc/rancher/k3s/k3s.yaml
+        
+        # Configure kubectl to use k3s.yaml
         mkdir -p ~/.kube
         sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
         sudo chown $(id -u):$(id -g) ~/.kube/config
         chmod 600 ~/.kube/config
         export KUBECONFIG=~/.kube/config
-        echo "k3s installed and kubectl configured."
+        
+        # Create a symlink to /tmp/kubeconfig for compatibility with the Terraform config
+        sudo mkdir -p /tmp
+        sudo ln -sf ~/.kube/config /tmp/kubeconfig
+        
+        echo "kubectl configured to use k3s. Testing connection..."
+        if kubectl cluster-info &> /dev/null; then
+            echo "Successfully connected to Kubernetes cluster."
+        else
+            echo "Still unable to connect to Kubernetes cluster."
+            echo "Would you like to restart k3s with proper permissions?"
+            read -p "Restart k3s with proper permissions? (y/n): " restart_k3s
+            if [[ "$restart_k3s" == "y" || "$restart_k3s" == "Y" ]]; then
+                echo "Configuring k3s to use proper permissions..."
+                sudo mkdir -p /etc/systemd/system/k3s.service.d/
+                sudo tee /etc/systemd/system/k3s.service.d/override.conf > /dev/null << EOF
+[Service]
+ExecStart=
+ExecStart=/usr/local/bin/k3s server --write-kubeconfig-mode 644
+EOF
+                sudo systemctl daemon-reload
+                sudo systemctl restart k3s
+                sleep 10
+                
+                # Try again with the new permissions
+                if kubectl cluster-info &> /dev/null; then
+                    echo "Successfully connected to Kubernetes cluster after restart."
+                else
+                    echo "Still unable to connect to Kubernetes cluster. Please check your k3s installation."
+                    exit 1
+                fi
+            else
+                echo "Please fix your Kubernetes configuration manually before continuing."
+                exit 1
+            fi
+        fi
     else
-        echo "Please set up a Kubernetes cluster and configure kubectl before continuing."
-        exit 1
+        # If k3s is not running, offer to install it
+        echo "Would you like to install k3s (a lightweight Kubernetes distribution)?"
+        read -p "Install k3s? (y/n): " install_k3s
+        if [[ "$install_k3s" == "y" || "$install_k3s" == "Y" ]]; then
+            echo "Installing k3s with proper permissions..."
+            curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644" sh -
+            
+            # Wait for k3s to start
+            echo "Waiting for k3s to start..."
+            sleep 15
+            
+            # Configure kubectl
+            mkdir -p ~/.kube
+            sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+            sudo chown $(id -u):$(id -g) ~/.kube/config
+            chmod 600 ~/.kube/config
+            export KUBECONFIG=~/.kube/config
+            
+            # Create a symlink to /tmp/kubeconfig for compatibility with the Terraform config
+            sudo mkdir -p /tmp
+            sudo ln -sf ~/.kube/config /tmp/kubeconfig
+            
+            echo "k3s installed and kubectl configured."
+            
+            # Verify connection
+            if kubectl cluster-info &> /dev/null; then
+                echo "Successfully connected to Kubernetes cluster."
+            else
+                echo "Unable to connect to Kubernetes cluster after installation. Please check your k3s installation."
+                exit 1
+            fi
+        else
+            echo "Please set up a Kubernetes cluster and configure kubectl before continuing."
+            exit 1
+        fi
     fi
 else
     echo "Kubernetes cluster is accessible."
+    
+    # Create a symlink to /tmp/kubeconfig for compatibility with the Terraform config
+    echo "Creating symlink to kubeconfig for Terraform compatibility..."
+    sudo mkdir -p /tmp
+    sudo ln -sf ~/.kube/config /tmp/kubeconfig
 fi
 
 # Check for kustomize
@@ -80,9 +211,16 @@ if ! command -v tofu &> /dev/null; then
     echo "OpenTofu not found. Installing..."
     curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh
     chmod +x install-opentofu.sh
-    ./install-opentofu.sh --install-method standalone
+    sudo ./install-opentofu.sh --install-method standalone
     rm install-opentofu.sh
-    echo "OpenTofu installed."
+    
+    # Verify installation
+    if ! command -v tofu &> /dev/null; then
+        echo "ERROR: Failed to install OpenTofu. Please install it manually and run this script again."
+        exit 1
+    else
+        echo "OpenTofu installed successfully."
+    fi
 else
     echo "OpenTofu is already installed."
 fi
@@ -90,17 +228,15 @@ fi
 # Check for git
 if ! command -v git &> /dev/null; then
     echo "Git not found. Installing..."
-    if command -v apt-get &> /dev/null; then
-        sudo apt-get update && sudo apt-get install -y git
-    elif command -v dnf &> /dev/null; then
-        sudo dnf install -y git
-    elif command -v yum &> /dev/null; then
-        sudo yum install -y git
-    else
-        echo "Could not determine package manager. Please install git manually."
+    install_package "git"
+    
+    # Verify installation
+    if ! command -v git &> /dev/null; then
+        echo "ERROR: Failed to install Git. Please install it manually and run this script again."
         exit 1
+    else
+        echo "Git installed successfully."
     fi
-    echo "Git installed."
 else
     echo "Git is already installed."
 fi
@@ -112,6 +248,26 @@ if [ ! -d "../wazuh-kubernetes" ]; then
 else
     echo "Wazuh Kubernetes repository already exists. Updating..."
     cd ../wazuh-kubernetes && git pull && cd -
+fi
+
+# Update Terraform variables to use the correct kubeconfig path
+echo "Updating Terraform configuration to use the correct kubeconfig path..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VARIABLES_FILE="$SCRIPT_DIR/terraform/variables.tf"
+
+if [ -f "$VARIABLES_FILE" ]; then
+    # Backup the original file
+    cp "$VARIABLES_FILE" "$VARIABLES_FILE.bak"
+    
+    # Update the kubeconfig path
+    if grep -q "kube_config_path" "$VARIABLES_FILE"; then
+        sed -i 's|default     = "/tmp/kubeconfig"|default     = "~/.kube/config"|g' "$VARIABLES_FILE"
+        echo "Updated kubeconfig path in variables.tf"
+    else
+        echo "WARNING: Could not find kube_config_path in variables.tf"
+    fi
+else
+    echo "WARNING: Could not find variables.tf file at $VARIABLES_FILE"
 fi
 
 # Initialize OpenTofu
@@ -126,3 +282,8 @@ echo "  tofu plan -out=wazuh.plan"
 echo "  tofu apply wazuh.plan"
 echo ""
 echo "After deployment, run 'tofu output access_instructions' to get access information."
+echo ""
+echo "TROUBLESHOOTING:"
+echo "  If you encounter permission issues with kubectl, try using 'sudo kubectl' commands."
+echo "  If you encounter 'command not found' errors with tofu, try using the full path: '/usr/local/bin/tofu'"
+echo "  For more troubleshooting information, see the TROUBLESHOOTING.md file."

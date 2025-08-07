@@ -1,7 +1,10 @@
 variable "kube_config_path" {
   description = "Path to the kubeconfig file"
   type        = string
-  default     = "/tmp/kubeconfig"
+  default     = "~/.kube/config"
+  # Alternative paths that might work if the default doesn't:
+  # - "/etc/rancher/k3s/k3s.yaml" (k3s default location)
+  # - "/tmp/kubeconfig" (symlink created by setup.sh)
 }
 
 variable "kube_context" {
