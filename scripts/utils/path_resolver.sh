@@ -39,6 +39,7 @@ EOF
 fi
 
 # Source the configuration
+# shellcheck source=/dev/null
 source "${CONFIG_FILE}"
 
 # Function to validate a path exists
@@ -101,7 +102,8 @@ update_config() {
 
 # Validate and update kubeconfig path if needed
 validate_kubeconfig() {
-  local kubeconfig_path=$(resolve_kubeconfig)
+  local kubeconfig_path
+  kubeconfig_path=$(resolve_kubeconfig)
 
   if [ -n "${kubeconfig_path}" ]; then
     # Update config if different
@@ -128,7 +130,7 @@ validate_all_paths() {
   validate_path "${TERRAFORM_DIR}" "Terraform directory" "false" || exit_code=1
 
   # Validate scripts directory
-  validate_path "${SCRIPTS_DIR}" "Scripts directory" "false" || exit_code=1
+  validate_path "${SCRIPT_DIR}/.." "Scripts directory" "false" || exit_code=1
 
   # Validate Wazuh Kubernetes repository
   if ! validate_path "${WAZUH_KUBERNETES_REPO}" "Wazuh Kubernetes repository" "false"; then

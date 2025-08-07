@@ -6,9 +6,12 @@ set -e
 
 # Script directory (absolute path)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# REPO_ROOT is used in path_resolver.sh
+export REPO_ROOT
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Source path resolver
+# shellcheck source=./path_resolver.sh
 source "${SCRIPT_DIR}/path_resolver.sh"
 
 # Colors for output
@@ -89,7 +92,8 @@ check_cluster_resources() {
   export KUBECONFIG="${KUBE_CONFIG_PATH}"
 
   # Get nodes
-  local nodes=$(kubectl get nodes -o name)
+  local nodes
+  nodes=$(kubectl get nodes -o name)
 
   if [ -z "${nodes}" ]; then
     print_message "${RED}" "ERROR: No nodes found in the cluster"
@@ -105,14 +109,16 @@ check_cluster_resources() {
 
   for node in ${nodes}; do
     # Get allocatable CPU and memory
-    local cpu=$(kubectl get ${node} -o jsonpath='{.status.allocatable.cpu}')
-    local memory=$(kubectl get ${node} -o jsonpath='{.status.allocatable.memory}')
+    local cpu
+    cpu=$(kubectl get "${node}" -o jsonpath='{.status.allocatable.cpu}')
+    local memory
+    memory=$(kubectl get "${node}" -o jsonpath='{.status.allocatable.memory}')
 
     # Convert memory to Mi
     memory=$(echo "${memory}" | sed 's/Ki$//' | awk '{print int($1/1024)}')
 
     # Add to totals
-    total_cpu=$((total_cpu + $(echo "${cpu}" | sed 's/[^0-9]*//g')))
+    total_cpu=$((total_cpu + ${cpu//[^0-9]/}))
     total_memory=$((total_memory + memory))
     node_count=$((node_count + 1))
   done
@@ -158,7 +164,8 @@ check_kubernetes_version() {
   export KUBECONFIG="${KUBE_CONFIG_PATH}"
 
   # Get Kubernetes version
-  local version=$(kubectl version --short 2>/dev/null | grep "Server Version" | awk '{print $3}' | sed 's/v//')
+  local version
+  version=$(kubectl version --short 2>/dev/null | grep "Server Version" | awk '{print $3}' | sed 's/v//')
 
   if [ -z "${version}" ]; then
     print_message "${YELLOW}" "WARNING: Could not determine Kubernetes version"
@@ -168,10 +175,12 @@ check_kubernetes_version() {
   print_message "${GREEN}" "✓ Kubernetes version: ${version}"
 
   # Check if version is sufficient
-  local major=$(echo "${version}" | cut -d. -f1)
-  local minor=$(echo "${version}" | cut -d. -f2)
+  local major
+  major=$(echo "${version}" | cut -d. -f1)
+  local minor
+  minor=$(echo "${version}" | cut -d. -f2)
 
-  if [ "${major}" -lt 1 ] || ([ "${major}" -eq 1 ] && [ "${minor}" -lt 19 ]); then
+  if [ "${major}" -lt 1 ] || { [ "${major}" -eq 1 ] && [ "${minor}" -lt 19 ]; }; then
     print_message "${YELLOW}" "WARNING: Kubernetes version ${version} may be too old for Wazuh"
     print_message "${YELLOW}" "Recommended: Kubernetes 1.19 or newer"
   fi

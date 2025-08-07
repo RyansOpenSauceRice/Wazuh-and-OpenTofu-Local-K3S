@@ -12,14 +12,14 @@ This script fixes common permission issues that may occur when working with Open
 ./fix-permissions.sh
 ```
 
-#### Features
+#### Fix Permissions Features
 
 - Fixes permissions on the OpenTofu directory
 - Fixes permissions on the kubeconfig file
 - Fixes permissions on the Wazuh Kubernetes repository
 - Removes lock files that might prevent OpenTofu from running
 
-#### Usage
+#### Fix Permissions Usage
 
 ```bash
 # Make sure the script is executable
@@ -29,7 +29,7 @@ chmod +x scripts/fix-permissions.sh
 ./scripts/fix-permissions.sh
 ```
 
-#### When to use
+#### Fix Permissions Use Cases
 
 - When you encounter "permission denied" errors with OpenTofu
 - When you see "Error acquiring the state lock" messages
@@ -40,14 +40,14 @@ chmod +x scripts/fix-permissions.sh
 
 This script automatically fixes common linting errors in the repository.
 
-#### Features
+#### Lint Fixing Features
 
 - Fixes Markdown linting issues
 - Formats and validates OpenTofu (Terraform) files
 - Fixes shell script linting issues
 - Installs required tools if they're missing
 
-#### Usage
+#### Lint Fixing Usage
 
 ```bash
 # Make sure the script is executable
@@ -95,14 +95,14 @@ This script handles path resolution and validation.
 ./utils/path_resolver.sh
 ```
 
-#### Features
+#### Path Resolver Features
 
 - Creates a configuration file if it doesn't exist
 - Validates paths to important directories
 - Resolves the kubeconfig path
 - Provides functions for path validation
 
-#### Usage
+#### Path Resolver Usage
 
 ```bash
 # Run directly
@@ -112,7 +112,7 @@ This script handles path resolution and validation.
 source ./utils/path_resolver.sh
 ```
 
-#### When to use
+#### Path Resolver Use Cases
 
 - When you need to validate paths before running commands
 - When you need to find the correct kubeconfig path
@@ -125,13 +125,13 @@ This script validates Kubernetes configuration and resources.
 ./utils/k8s_validator.sh
 ```
 
-#### Features
+#### K8s Validator Features
 
 - Checks if kubectl is installed
 - Checks if the Kubernetes cluster is accessible
 - Checks if the necessary resources are available
 
-#### Usage
+#### K8s Validator Usage
 
 ```bash
 # Run directly
@@ -141,7 +141,7 @@ This script validates Kubernetes configuration and resources.
 source ./utils/k8s_validator.sh
 ```
 
-#### When to use
+#### K8s Validator Use Cases
 
 - Before deploying Wazuh to ensure Kubernetes is properly configured
 - When troubleshooting Kubernetes-related issues
@@ -155,14 +155,14 @@ This script handles errors and provides recovery procedures.
 source ./utils/error_handler.sh
 ```
 
-#### Features
+#### Error Handler Features
 
 - Provides functions for error handling
 - Logs errors to a deployment log
 - Attempts to recover from common errors
 - Displays troubleshooting information
 
-#### Usage
+#### Error Handler Usage
 
 ```bash
 # Source in another script
@@ -173,7 +173,7 @@ handle_error 1 "Failed to access Kubernetes" recover_kubernetes_access
 display_troubleshooting 1 "kubernetes"
 ```
 
-#### When to use
+#### Error Handler Use Cases
 
 - When developing new scripts that need error handling
 - When troubleshooting deployment issues

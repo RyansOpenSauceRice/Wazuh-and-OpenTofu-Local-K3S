@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Source path resolver
+# shellcheck source=./path_resolver.sh
 source "${SCRIPT_DIR}/path_resolver.sh"
 
 # Colors for output
@@ -34,7 +35,8 @@ print_message() {
 log_message() {
   local level="$1"
   local message="$2"
-  local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+  local timestamp
+  timestamp=$(date +"%Y-%m-%d %H:%M:%S")
   echo "[${timestamp}] [${level}] ${message}" >> "${LOG_FILE}"
 }
 
@@ -47,7 +49,7 @@ handle_error() {
   print_message "${RED}" "ERROR: ${error_message} (Code: ${error_code})"
   log_message "ERROR" "${error_message} (Code: ${error_code})"
 
-  if [ -n "${recovery_function}" ] && [ "$(type -t ${recovery_function})" = "function" ]; then
+  if [ -n "${recovery_function}" ] && [ "$(type -t "${recovery_function}")" = "function" ]; then
     print_message "${YELLOW}" "Attempting recovery..."
     log_message "INFO" "Attempting recovery with function: ${recovery_function}"
     ${recovery_function}
@@ -60,12 +62,12 @@ handle_error() {
     else
       print_message "${RED}" "Recovery failed (Code: ${recovery_code})"
       log_message "ERROR" "Recovery failed (Code: ${recovery_code})"
-      return ${error_code}
+      return "${error_code}"
     fi
   else
     print_message "${YELLOW}" "No recovery function available"
     log_message "INFO" "No recovery function available"
-    return ${error_code}
+    return "${error_code}"
   fi
 }
 
@@ -143,7 +145,8 @@ recover_kubernetes_access() {
     print_message "${YELLOW}" "Kubeconfig not found at ${KUBE_CONFIG_PATH}"
 
     # Try to find kubeconfig in default locations
-    local kubeconfig_path=$(resolve_kubeconfig)
+    local kubeconfig_path
+    kubeconfig_path=$(resolve_kubeconfig)
 
     if [ -n "${kubeconfig_path}" ]; then
       print_message "${GREEN}" "Found kubeconfig at ${kubeconfig_path}"
@@ -199,9 +202,7 @@ recover_terraform_state() {
 
   # Reinitialize OpenTofu
   print_message "${YELLOW}" "Reinitializing OpenTofu"
-  cd "${TERRAFORM_DIR}" && tofu init -reconfigure &> /dev/null
-
-  if [ $? -eq 0 ]; then
+  if cd "${TERRAFORM_DIR}" && tofu init -reconfigure &> /dev/null; then
     print_message "${GREEN}" "OpenTofu state recovered"
     return 0
   else
@@ -230,9 +231,7 @@ recover_wazuh_deployment() {
   # Try manual deployment
   if [ -d "${WAZUH_KUBERNETES_REPO}/envs/local-env" ]; then
     print_message "${YELLOW}" "Attempting manual deployment from local-env"
-    cd "${WAZUH_KUBERNETES_REPO}/envs/local-env" && kubectl apply -k . &> /dev/null
-
-    if [ $? -eq 0 ]; then
+    if cd "${WAZUH_KUBERNETES_REPO}/envs/local-env" && kubectl apply -k . &> /dev/null; then
       print_message "${GREEN}" "Wazuh deployment recovered"
       return 0
     fi
@@ -242,18 +241,16 @@ recover_wazuh_deployment() {
   print_message "${YELLOW}" "Attempting fallback deployment"
 
   # Create secrets
-  kubectl -n "${WAZUH_NAMESPACE}" create secret generic wazuh-cluster-key-secret --from-literal=key=$(openssl rand -base64 32) &> /dev/null
-  kubectl -n "${WAZUH_NAMESPACE}" create secret generic wazuh-authd-pass-secret --from-literal=password=$(openssl rand -base64 16) &> /dev/null
-  kubectl -n "${WAZUH_NAMESPACE}" create secret generic wazuh-api-cred-secret --from-literal=username=wazuh-api --from-literal=password=$(openssl rand -base64 16) &> /dev/null
-  kubectl -n "${WAZUH_NAMESPACE}" create secret generic indexer-cred-secret --from-literal=username=admin --from-literal=password=$(openssl rand -base64 16) &> /dev/null
-  kubectl -n "${WAZUH_NAMESPACE}" create secret generic dashboard-cred-secret --from-literal=username=admin --from-literal=password=$(openssl rand -base64 16) &> /dev/null
+  kubectl -n "${WAZUH_NAMESPACE}" create secret generic wazuh-cluster-key-secret --from-literal=key="$(openssl rand -base64 32)" &> /dev/null
+  kubectl -n "${WAZUH_NAMESPACE}" create secret generic wazuh-authd-pass-secret --from-literal=password="$(openssl rand -base64 16)" &> /dev/null
+  kubectl -n "${WAZUH_NAMESPACE}" create secret generic wazuh-api-cred-secret --from-literal=username=wazuh-api --from-literal=password="$(openssl rand -base64 16)" &> /dev/null
+  kubectl -n "${WAZUH_NAMESPACE}" create secret generic indexer-cred-secret --from-literal=username=admin --from-literal=password="$(openssl rand -base64 16)" &> /dev/null
+  kubectl -n "${WAZUH_NAMESPACE}" create secret generic dashboard-cred-secret --from-literal=username=admin --from-literal=password="$(openssl rand -base64 16)" &> /dev/null
 
   # Deploy components using fallback manifests
   if [ -d "${REPO_ROOT}/fallback-manifests" ]; then
     print_message "${YELLOW}" "Deploying from fallback manifests"
-    kubectl apply -f "${REPO_ROOT}/fallback-manifests" -n "${WAZUH_NAMESPACE}" &> /dev/null
-
-    if [ $? -eq 0 ]; then
+    if kubectl apply -f "${REPO_ROOT}/fallback-manifests" -n "${WAZUH_NAMESPACE}" &> /dev/null; then
       print_message "${GREEN}" "Wazuh deployment recovered using fallback manifests"
       return 0
     fi

@@ -8,14 +8,14 @@ This directory contains utility scripts that are used by the main scripts in the
 
 This script handles path resolution and validation.
 
-#### Features
+#### Path Resolver Capabilities
 
 - Creates a configuration file if it doesn't exist
 - Validates paths to important directories
 - Resolves the kubeconfig path
 - Provides functions for path validation
 
-#### Usage
+#### Path Resolver Implementation
 
 ```bash
 # Run directly
@@ -29,13 +29,13 @@ source ./path_resolver.sh
 
 This script validates Kubernetes configuration and resources.
 
-#### Features
+#### K8s Validator Capabilities
 
 - Checks if kubectl is installed
 - Checks if the Kubernetes cluster is accessible
 - Checks if the necessary resources are available
 
-#### Usage
+#### K8s Validator Implementation
 
 ```bash
 # Run directly
@@ -49,14 +49,14 @@ source ./k8s_validator.sh
 
 This script handles errors and provides recovery procedures.
 
-#### Features
+#### Error Handler Capabilities
 
 - Provides functions for error handling
 - Logs errors to a deployment log
 - Attempts to recover from common errors
 - Displays troubleshooting information
 
-#### Usage
+#### Error Handler Implementation
 
 ```bash
 # Source in another script
@@ -95,7 +95,8 @@ display_troubleshooting 1 "kubernetes"
 
 ## Configuration
 
-The scripts use a configuration file located at `${REPO_ROOT}/config.env`. This file is created automatically by the `path_resolver.sh` script if it doesn't exist.
+The scripts use a configuration file located at `${REPO_ROOT}/config.env`.
+This file is created automatically by the `path_resolver.sh` script if it doesn't exist.
 
 Example configuration:
 
