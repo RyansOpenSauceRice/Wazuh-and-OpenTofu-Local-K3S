@@ -7,8 +7,8 @@
 [![Platform](https://img.shields.io/badge/platform-Fedora%20Atomic-294172?style=for-the-badge&logo=fedora)](https://fedoraproject.org/atomic/)
 [![Status](https://img.shields.io/badge/status-development-yellow?style=for-the-badge&logo=github)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm)
 [![Level](https://img.shields.io/badge/level-entry-green?style=for-the-badge)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm)
-[![License](https://img.shields.io/github/license/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm?color=blue&style=for-the-badge)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm/blob/main/LICENSE)
-[![Documentation](https://img.shields.io/badge/docs-markdown-green?style=for-the-badge&logo=markdown)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm/tree/main/docs)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue?style=for-the-badge)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-Local-K3S/blob/main/LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-green?style=for-the-badge)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-with-Helm/tree/main/docs)
 
 This repository contains OpenTofu (formerly Terraform) configurations to deploy Wazuh SIEM on a local Kubernetes cluster running on Fedora Atomic hypervisor using Kustomize.
 
