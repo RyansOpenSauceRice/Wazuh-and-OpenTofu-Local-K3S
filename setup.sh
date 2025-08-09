@@ -20,6 +20,123 @@ TEMP_DIR=$(mktemp -d)
 cleanup() { rm -rf "$TEMP_DIR"; }
 trap cleanup EXIT
 
+# Default values
+AUTO_DEPLOY=false
+USE_CUSTOM_CREDS=false
+DASHBOARD_USERNAME="admin"
+API_USERNAME="wazuh-api"
+INDEXER_USERNAME="admin"
+DASHBOARD_PASSWORD=""
+API_PASSWORD=""
+INDEXER_PASSWORD=""
+
+# Help function
+show_help() {
+    cat << EOF
+Wazuh SIEM Deployment Setup Script
+
+USAGE:
+    $0 [OPTIONS]
+
+OPTIONS:
+    -h, --help                    Show this help message
+    -y, --auto-deploy            Automatically deploy after setup (non-interactive)
+    --dashboard-user USER        Set dashboard username (default: admin)
+    --dashboard-pass PASS        Set dashboard password (min 8 chars)
+    --api-user USER              Set API username (default: wazuh-api)
+    --api-pass PASS              Set API password (min 8 chars)
+    --indexer-user USER          Set indexer username (default: admin)
+    --indexer-pass PASS          Set indexer password (min 8 chars)
+
+EXAMPLES:
+    # Interactive setup (default)
+    $0
+
+    # Auto-deploy with default credentials
+    $0 --auto-deploy
+
+    # Set custom credentials via command line
+    $0 --dashboard-user myuser --dashboard-pass mypassword123 \\
+       --api-user myapi --api-pass myapipass123 \\
+       --indexer-user myindexer --indexer-pass myindexerpass123 \\
+       --auto-deploy
+
+NOTES:
+    - Officially supports Fedora Atomic
+    - Best-effort support for Fedora, Ubuntu, and RHEL/CentOS/Alma
+    - Passwords must be at least 8 characters long
+    - Usernames must contain only letters, numbers, underscores, and hyphens
+EOF
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -y|--auto-deploy)
+            AUTO_DEPLOY=true
+            shift
+            ;;
+        --dashboard-user)
+            DASHBOARD_USERNAME="$2"
+            USE_CUSTOM_CREDS=true
+            shift 2
+            ;;
+        --dashboard-pass)
+            DASHBOARD_PASSWORD="$2"
+            USE_CUSTOM_CREDS=true
+            shift 2
+            ;;
+        --api-user)
+            API_USERNAME="$2"
+            USE_CUSTOM_CREDS=true
+            shift 2
+            ;;
+        --api-pass)
+            API_PASSWORD="$2"
+            USE_CUSTOM_CREDS=true
+            shift 2
+            ;;
+        --indexer-user)
+            INDEXER_USERNAME="$2"
+            USE_CUSTOM_CREDS=true
+            shift 2
+            ;;
+        --indexer-pass)
+            INDEXER_PASSWORD="$2"
+            USE_CUSTOM_CREDS=true
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
+# Validate command-line credentials if provided
+if [ "$USE_CUSTOM_CREDS" = true ]; then
+    # Validate usernames
+    for user_var in DASHBOARD_USERNAME API_USERNAME INDEXER_USERNAME; do
+        user_value="${!user_var}"
+        if [[ ! "$user_value" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+            error "Invalid username '$user_value': must contain only letters, numbers, underscores, and hyphens"
+        fi
+    done
+    
+    # Validate passwords if provided
+    for pass_var in DASHBOARD_PASSWORD API_PASSWORD INDEXER_PASSWORD; do
+        pass_value="${!pass_var}"
+        if [ -n "$pass_value" ] && [ ${#pass_value} -lt 8 ]; then
+            error "Password for $pass_var must be at least 8 characters long"
+        fi
+    done
+fi
+
 status "Wazuh SIEM Deployment Setup"
 echo "This script will install and configure all necessary components for deploying Wazuh SIEM."
 
@@ -35,6 +152,246 @@ require() {
         fi
     done
     echo "$MISSING"
+}
+
+# Function to prompt for credentials
+prompt_credentials() {
+    # Skip prompting if credentials were provided via command line
+    if [ "$USE_CUSTOM_CREDS" = true ]; then
+        echo
+        status "Using credentials provided via command line"
+        echo "Dashboard: $DASHBOARD_USERNAME"
+        echo "API: $API_USERNAME" 
+        echo "Indexer: $INDEXER_USERNAME"
+        echo
+        return
+    fi
+    
+    echo
+    status "Credential Configuration"
+    echo "You can configure custom credentials for Wazuh components or use auto-generated ones."
+    echo
+    
+    # Prompt for credential preference
+    while true; do
+        echo -n "Do you want to set custom credentials? [y/N]: "
+        read -r CUSTOM_CREDS
+        case "${CUSTOM_CREDS:-n}" in
+            [Yy]|[Yy][Ee][Ss]) 
+                USE_CUSTOM_CREDS=true
+                break
+                ;;
+            [Nn]|[Nn][Oo]|"") 
+                USE_CUSTOM_CREDS=false
+                status "Using auto-generated secure passwords"
+                break
+                ;;
+            *) 
+                echo "Please answer yes or no."
+                ;;
+        esac
+    done
+    
+    if [ "$USE_CUSTOM_CREDS" = true ]; then
+        echo
+        status "Setting up custom credentials"
+        
+        # Dashboard credentials
+        echo "=== Wazuh Dashboard Credentials ==="
+        while true; do
+            echo -n "Dashboard username [admin]: "
+            read -r DASHBOARD_USERNAME
+            DASHBOARD_USERNAME="${DASHBOARD_USERNAME:-admin}"
+            if [[ "$DASHBOARD_USERNAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+                break
+            else
+                echo "Username must contain only letters, numbers, underscores, and hyphens."
+            fi
+        done
+        
+        while true; do
+            echo -n "Dashboard password (min 8 chars): "
+            read -rs DASHBOARD_PASSWORD
+            echo
+            if [ ${#DASHBOARD_PASSWORD} -ge 8 ]; then
+                echo -n "Confirm password: "
+                read -rs DASHBOARD_PASSWORD_CONFIRM
+                echo
+                if [ "$DASHBOARD_PASSWORD" = "$DASHBOARD_PASSWORD_CONFIRM" ]; then
+                    break
+                else
+                    echo "Passwords do not match. Please try again."
+                fi
+            else
+                echo "Password must be at least 8 characters long."
+            fi
+        done
+        
+        # API credentials
+        echo
+        echo "=== Wazuh API Credentials ==="
+        while true; do
+            echo -n "API username [wazuh-api]: "
+            read -r API_USERNAME
+            API_USERNAME="${API_USERNAME:-wazuh-api}"
+            if [[ "$API_USERNAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+                break
+            else
+                echo "Username must contain only letters, numbers, underscores, and hyphens."
+            fi
+        done
+        
+        while true; do
+            echo -n "API password (min 8 chars): "
+            read -rs API_PASSWORD
+            echo
+            if [ ${#API_PASSWORD} -ge 8 ]; then
+                echo -n "Confirm password: "
+                read -rs API_PASSWORD_CONFIRM
+                echo
+                if [ "$API_PASSWORD" = "$API_PASSWORD_CONFIRM" ]; then
+                    break
+                else
+                    echo "Passwords do not match. Please try again."
+                fi
+            else
+                echo "Password must be at least 8 characters long."
+            fi
+        done
+        
+        # Indexer credentials
+        echo
+        echo "=== Wazuh Indexer Credentials ==="
+        while true; do
+            echo -n "Indexer username [admin]: "
+            read -r INDEXER_USERNAME
+            INDEXER_USERNAME="${INDEXER_USERNAME:-admin}"
+            if [[ "$INDEXER_USERNAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+                break
+            else
+                echo "Username must contain only letters, numbers, underscores, and hyphens."
+            fi
+        done
+        
+        while true; do
+            echo -n "Indexer password (min 8 chars): "
+            read -rs INDEXER_PASSWORD
+            echo
+            if [ ${#INDEXER_PASSWORD} -ge 8 ]; then
+                echo -n "Confirm password: "
+                read -rs INDEXER_PASSWORD_CONFIRM
+                echo
+                if [ "$INDEXER_PASSWORD" = "$INDEXER_PASSWORD_CONFIRM" ]; then
+                    break
+                else
+                    echo "Passwords do not match. Please try again."
+                fi
+            else
+                echo "Password must be at least 8 characters long."
+            fi
+        done
+        
+        echo
+        status "Custom credentials configured successfully"
+        echo "Dashboard: $DASHBOARD_USERNAME"
+        echo "API: $API_USERNAME" 
+        echo "Indexer: $INDEXER_USERNAME"
+        echo
+    else
+        # Set default values for auto-generated credentials
+        DASHBOARD_USERNAME="admin"
+        API_USERNAME="wazuh-api"
+        INDEXER_USERNAME="admin"
+        DASHBOARD_PASSWORD=""
+        API_PASSWORD=""
+        INDEXER_PASSWORD=""
+    fi
+}
+
+# Function to create credential secrets
+create_credential_secrets() {
+    local namespace="$1"
+    
+    if [ "$USE_CUSTOM_CREDS" = true ]; then
+        status "Creating custom credential secrets"
+        
+        # Create secrets with custom credentials
+        kubectl -n "$namespace" create secret generic wazuh-authd-pass-secret \
+            --from-literal=password="$(openssl rand -base64 16)" &> /dev/null || true
+            
+        kubectl -n "$namespace" create secret generic wazuh-api-cred-secret \
+            --from-literal=username="$API_USERNAME" \
+            --from-literal=password="$API_PASSWORD" &> /dev/null || true
+            
+        kubectl -n "$namespace" create secret generic indexer-cred-secret \
+            --from-literal=username="$INDEXER_USERNAME" \
+            --from-literal=password="$INDEXER_PASSWORD" &> /dev/null || true
+            
+        kubectl -n "$namespace" create secret generic dashboard-cred-secret \
+            --from-literal=username="$DASHBOARD_USERNAME" \
+            --from-literal=password="$DASHBOARD_PASSWORD" &> /dev/null || true
+    else
+        status "Creating auto-generated credential secrets"
+        
+        # Generate secure random passwords
+        DASHBOARD_PASSWORD="$(openssl rand -base64 16)"
+        API_PASSWORD="$(openssl rand -base64 16)"
+        INDEXER_PASSWORD="$(openssl rand -base64 16)"
+        
+        # Create secrets with auto-generated credentials
+        kubectl -n "$namespace" create secret generic wazuh-authd-pass-secret \
+            --from-literal=password="$(openssl rand -base64 16)" &> /dev/null || true
+            
+        kubectl -n "$namespace" create secret generic wazuh-api-cred-secret \
+            --from-literal=username="$API_USERNAME" \
+            --from-literal=password="$API_PASSWORD" &> /dev/null || true
+            
+        kubectl -n "$namespace" create secret generic indexer-cred-secret \
+            --from-literal=username="$INDEXER_USERNAME" \
+            --from-literal=password="$INDEXER_PASSWORD" &> /dev/null || true
+            
+        kubectl -n "$namespace" create secret generic dashboard-cred-secret \
+            --from-literal=username="$DASHBOARD_USERNAME" \
+            --from-literal=password="$DASHBOARD_PASSWORD" &> /dev/null || true
+    fi
+}
+
+# Function to save credentials to file
+save_credentials() {
+    local creds_file="$1"
+    
+    status "Saving credentials to $creds_file"
+    
+    cat > "$creds_file" << EOF
+# Wazuh SIEM Credentials
+# Generated on $(date)
+
+=== Wazuh Dashboard ===
+URL: https://localhost:5601
+Username: $DASHBOARD_USERNAME
+Password: $DASHBOARD_PASSWORD
+
+=== Wazuh API ===
+Username: $API_USERNAME
+Password: $API_PASSWORD
+
+=== Wazuh Indexer ===
+Username: $INDEXER_USERNAME
+Password: $INDEXER_PASSWORD
+
+=== Access Instructions ===
+1. Port-forward the dashboard service:
+   kubectl port-forward -n wazuh svc/wazuh-dashboard 5601:5601
+
+2. Access the dashboard at: https://localhost:5601
+
+3. Use the dashboard credentials above to log in
+
+Note: Keep this file secure and do not commit it to version control.
+EOF
+    
+    chmod 600 "$creds_file"
+    echo "Credentials saved to: $creds_file"
 }
 
 # Verify we're on Linux
@@ -53,6 +410,9 @@ NEEDS=$(require curl)
 if [ -n "$NEEDS" ]; then
     error "The following basic tools are required but missing:$NEEDS"
 fi
+
+# Configure credentials
+prompt_credentials
 
 # Detect OS and package manager
 if [ ! -f "/etc/os-release" ]; then
@@ -378,13 +738,92 @@ echo "Initializing OpenTofu..."
 cd terraform
 tofu init
 
-echo "Setup complete! You can now deploy Wazuh SIEM using OpenTofu."
-echo "To deploy, run the following commands:"
-echo "  cd terraform"
-echo "  tofu plan -out=wazuh.plan"
-echo "  tofu apply wazuh.plan"
-echo ""
-echo "After deployment, run 'tofu output access_instructions' to get access information."
+echo
+status "Setup complete! All dependencies are installed."
+
+# Determine if we should deploy
+if [ "$AUTO_DEPLOY" = true ]; then
+    SHOULD_DEPLOY=true
+    status "Auto-deploy enabled, proceeding with deployment..."
+else
+    # Ask if user wants to deploy now
+    echo
+    while true; do
+        echo -n "Do you want to deploy Wazuh SIEM now? [y/N]: "
+        read -r DEPLOY_NOW
+        case "${DEPLOY_NOW:-n}" in
+            [Yy]|[Yy][Ee][Ss]) 
+                SHOULD_DEPLOY=true
+                break
+                ;;
+            [Nn]|[Nn][Oo]|"") 
+                SHOULD_DEPLOY=false
+                break
+                ;;
+            *) 
+                echo "Please answer yes or no."
+                ;;
+        esac
+    done
+fi
+
+if [ "$SHOULD_DEPLOY" = true ]; then
+    echo
+    status "Deploying Wazuh SIEM..."
+    
+    # Create namespace if it doesn't exist
+    WAZUH_NAMESPACE="wazuh"
+    kubectl create namespace "$WAZUH_NAMESPACE" &> /dev/null || true
+    
+    # Create credential secrets
+    create_credential_secrets "$WAZUH_NAMESPACE"
+    
+    # Run OpenTofu deployment
+    status "Running OpenTofu plan..."
+    if tofu plan -out=wazuh.plan; then
+        status "Applying OpenTofu configuration..."
+        if tofu apply wazuh.plan; then
+            status "Deployment successful!"
+            
+            # Save credentials to file
+            CREDS_FILE="$(pwd)/wazuh-credentials.txt"
+            save_credentials "$CREDS_FILE"
+            
+            echo
+            status "Deployment Complete!"
+            echo "Dashboard URL: https://localhost:5601"
+            echo "Credentials saved to: $CREDS_FILE"
+            echo
+            echo "To access the dashboard:"
+            echo "1. Port-forward the service: kubectl port-forward -n wazuh svc/wazuh-dashboard 5601:5601"
+            echo "2. Open https://localhost:5601 in your browser"
+            echo "3. Use the credentials from $CREDS_FILE"
+            
+        else
+            error "OpenTofu apply failed. Check the output above for details."
+        fi
+    else
+        error "OpenTofu plan failed. Check the output above for details."
+    fi
+else
+    echo
+    status "Manual Deployment Instructions"
+    echo "To deploy Wazuh SIEM manually, run the following commands:"
+    echo "  cd terraform"
+    echo "  tofu plan -out=wazuh.plan"
+    echo "  tofu apply wazuh.plan"
+    echo ""
+    echo "After deployment, run 'tofu output access_instructions' to get access information."
+    echo ""
+    echo "Note: If you chose custom credentials, you'll need to create the secrets manually:"
+    if [ "$USE_CUSTOM_CREDS" = true ]; then
+        echo "  kubectl create namespace wazuh"
+        echo "  kubectl -n wazuh create secret generic dashboard-cred-secret --from-literal=username='$DASHBOARD_USERNAME' --from-literal=password='[your-password]'"
+        echo "  kubectl -n wazuh create secret generic wazuh-api-cred-secret --from-literal=username='$API_USERNAME' --from-literal=password='[your-password]'"
+        echo "  kubectl -n wazuh create secret generic indexer-cred-secret --from-literal=username='$INDEXER_USERNAME' --from-literal=password='[your-password]'"
+    fi
+fi
+
 echo ""
 echo "TROUBLESHOOTING:"
 echo "  If you encounter permission issues with kubectl, try using 'sudo kubectl' commands."

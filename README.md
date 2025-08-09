@@ -48,24 +48,47 @@ cd Wazuh-and-OpenTofu-Local-K3S
 # Make the setup script executable
 chmod +x setup.sh
 
-# Run the setup script
+# Interactive setup (recommended for first-time users)
 ./setup.sh
+
+# Or auto-deploy with default credentials
+./setup.sh --auto-deploy
+
+# Or set custom credentials via command line
+./setup.sh --dashboard-user myuser --dashboard-pass mypassword123 \
+           --api-user myapi --api-pass myapipass123 \
+           --indexer-user myindexer --indexer-pass myindexerpass123 \
+           --auto-deploy
 ```
 
-The setup script will:
+### Credential Configuration
+
+The setup script supports multiple ways to configure Wazuh credentials:
+
+1. **Interactive prompts** (default): The script will ask if you want custom credentials
+2. **Command-line arguments**: Use `--dashboard-user`, `--dashboard-pass`, etc.
+3. **Auto-generated**: Secure random passwords (default if no custom credentials)
+
+### What the Setup Script Does
 
 1. Check and install required dependencies (kubectl, OpenTofu, Git, OpenSSL)
-2. Set up or detect an existing K3s cluster
-3. Configure kubectl to access your cluster
-4. Clone the Wazuh Kubernetes repository
-5. Initialize OpenTofu
+2. Configure Wazuh credentials (interactive or via command line)
+3. Set up or detect an existing K3s cluster
+4. Configure kubectl to access your cluster
+5. Clone the Wazuh Kubernetes repository
+6. Initialize OpenTofu
+7. Optionally deploy Wazuh immediately
 
-After running the setup script, you can deploy Wazuh:
+### Accessing Your Deployment
+
+After deployment, credentials are saved to `wazuh-credentials.txt` in the terraform directory. To access the dashboard:
 
 ```bash
-cd opentofu
-sudo tofu plan -out=wazuh.plan
-sudo tofu apply wazuh.plan
+# Port-forward the dashboard service
+kubectl port-forward -n wazuh svc/wazuh-dashboard 5601:5601
+
+# Open https://localhost:5601 in your browser
+# Use credentials from wazuh-credentials.txt
 ```
 
 ## Manual Setup Instructions

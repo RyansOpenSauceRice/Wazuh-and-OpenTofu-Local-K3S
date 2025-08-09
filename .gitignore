@@ -52,6 +52,12 @@ kustomize
 kustomization.yml.bak
 wazuh-kubernetes/
 
+# Credential files
+*credentials*.txt
+*password*.txt
+.env
+.env.*
+
 # OS specific files
 .DS_Store
 Thumbs.db
