@@ -1,49 +1,149 @@
 #!/bin/bash
 
-# Setup script for Wazuh SIEM deployment with OpenTofu and Kustomize on Fedora Atomic
-# Updated with improved error handling and compatibility
+# Setup script for Wazuh SIEM deployment with OpenTofu and Kustomize
+# Officially supports Fedora Atomic, with best-effort support for Fedora, Ubuntu, and RHEL/CentOS/Alma
 
-set -e
+set -eu
 
-echo "=== Wazuh SIEM Deployment Setup ==="
-echo "This script will help you set up the necessary components for deploying Wazuh SIEM."
+# Color output functions
+red="$( (/usr/bin/tput bold || :; /usr/bin/tput setaf 1 || :) 2>&-)"
+green="$( (/usr/bin/tput bold || :; /usr/bin/tput setaf 2 || :) 2>&-)"
+yellow="$( (/usr/bin/tput bold || :; /usr/bin/tput setaf 3 || :) 2>&-)"
+plain="$( (/usr/bin/tput sgr0 || :) 2>&-)"
 
-# Function to detect and use the appropriate package manager
-install_package() {
-    local package_name=$1
-    echo "Installing $package_name..."
+status() { echo "${green}>>> $*${plain}" >&2; }
+error() { echo "${red}ERROR:${plain} $*" >&2; exit 1; }
+warning() { echo "${yellow}WARNING:${plain} $*" >&2; }
 
-    if command -v apt-get &> /dev/null; then
-        sudo apt-get update && sudo apt-get install -y "$package_name"
-    elif command -v dnf &> /dev/null; then
-        sudo dnf install -y "$package_name"
-    elif command -v yum &> /dev/null; then
-        sudo yum install -y "$package_name"
-    elif command -v rpm-ostree &> /dev/null; then
-        sudo rpm-ostree install "$package_name"
-        echo "NOTE: You may need to reboot your system for the rpm-ostree changes to take effect."
-    else
-        echo "WARNING: Could not determine package manager. Please install $package_name manually."
-        return 1
-    fi
+# Cleanup function
+TEMP_DIR=$(mktemp -d)
+cleanup() { rm -rf "$TEMP_DIR"; }
+trap cleanup EXIT
 
-    return 0
+status "Wazuh SIEM Deployment Setup"
+echo "This script will install and configure all necessary components for deploying Wazuh SIEM."
+
+# Check if tools are available
+available() { command -v "$1" >/dev/null 2>&1; }
+
+# Check for required basic tools upfront
+require() {
+    local MISSING=''
+    for TOOL in $*; do
+        if ! available "$TOOL"; then
+            MISSING="$MISSING $TOOL"
+        fi
+    done
+    echo "$MISSING"
 }
 
-# Check if running on Fedora Atomic
-if [ -f /etc/os-release ]; then
-    # shellcheck source=/dev/null
-    . /etc/os-release
-    echo "Detected OS: $PRETTY_NAME"
-    if [[ "$ID" != "fedora-coreos" && "$ID" != "fedora" ]]; then
-        echo "Warning: This script is designed for Fedora Atomic. You are running $PRETTY_NAME."
-        read -r -p "Do you want to continue anyway? (y/n): " continue_anyway
-        if [[ "$continue_anyway" != "y" && "$continue_anyway" != "Y" ]]; then
-            echo "Exiting."
-            exit 1
-        fi
-    fi
+# Verify we're on Linux
+[ "$(uname -s)" = "Linux" ] || error 'This script is intended to run on Linux only.'
+
+# Check architecture (for kubectl download)
+ARCH=$(uname -m)
+case "$ARCH" in
+    x86_64) ARCH="amd64" ;;
+    aarch64|arm64) ARCH="arm64" ;;
+    *) warning "Architecture $ARCH may not be fully supported" ;;
+esac
+
+# Check for basic system tools
+NEEDS=$(require curl)
+if [ -n "$NEEDS" ]; then
+    error "The following basic tools are required but missing:$NEEDS"
 fi
+
+# Detect OS and package manager
+if [ ! -f "/etc/os-release" ]; then
+    error "Cannot detect operating system."
+fi
+
+. /etc/os-release
+status "Detected OS: $PRETTY_NAME (Architecture: $ARCH)"
+
+# Officially supported: Fedora Atomic/CoreOS
+# Best effort support: Fedora, Ubuntu, RHEL/CentOS/Alma
+PACKAGE_MANAGER=""
+OFFICIALLY_SUPPORTED=false
+
+case "$ID" in
+    fedora-coreos)
+        status "Fedora Atomic/CoreOS detected - OFFICIALLY SUPPORTED"
+        PACKAGE_MANAGER="rpm-ostree"
+        OFFICIALLY_SUPPORTED=true
+        warning "Some packages may require a reboot with rpm-ostree."
+        ;;
+    fedora)
+        if [ "${VARIANT_ID:-}" = "coreos" ] 2>/dev/null; then
+            status "Fedora CoreOS detected - OFFICIALLY SUPPORTED"
+            PACKAGE_MANAGER="rpm-ostree"
+            OFFICIALLY_SUPPORTED=true
+        else
+            status "Fedora Desktop detected - BEST EFFORT SUPPORT"
+            PACKAGE_MANAGER="dnf"
+        fi
+        ;;
+    ubuntu|debian)
+        warning "Ubuntu/Debian detected - BEST EFFORT SUPPORT"
+        warning "This project is officially designed for Fedora Atomic."
+        PACKAGE_MANAGER="apt-get"
+        ;;
+    centos|rhel|almalinux|rocky)
+        warning "RHEL/CentOS/Alma detected - BEST EFFORT SUPPORT"
+        warning "This project is officially designed for Fedora Atomic."
+        if available dnf; then
+            PACKAGE_MANAGER="dnf"
+        elif available yum; then
+            PACKAGE_MANAGER="yum"
+        else
+            error "No supported package manager found."
+        fi
+        ;;
+    *)
+        error "Unsupported OS: $PRETTY_NAME. This project officially supports Fedora Atomic only."
+        ;;
+esac
+
+if [ "$OFFICIALLY_SUPPORTED" = false ]; then
+    echo ""
+    warning "IMPORTANT: This OS is not officially supported."
+    warning "Official support is only provided for Fedora Atomic/CoreOS."
+    warning "Continuing with best-effort support..."
+    echo ""
+    read -r -p "Continue anyway? (y/N): " continue_anyway
+    case "$continue_anyway" in
+        [Yy]*) status "Proceeding with best-effort support..." ;;
+        *) error "Installation cancelled. Please use Fedora Atomic for official support." ;;
+    esac
+fi
+
+status "Using package manager: $PACKAGE_MANAGER"
+
+# Enhanced package installation function
+install_package() {
+    local package_name="$1"
+    status "Installing $package_name..."
+
+    case "$PACKAGE_MANAGER" in
+        apt-get)
+            sudo apt-get update -qq && sudo apt-get install -y "$package_name"
+            ;;
+        dnf)
+            sudo dnf install -y "$package_name"
+            ;;
+        yum)
+            sudo yum install -y "$package_name"
+            ;;
+        rpm-ostree)
+            sudo rpm-ostree install "$package_name"
+            warning "You may need to reboot for rpm-ostree changes to take effect."
+            ;;
+        *)
+            error "Unsupported package manager: $PACKAGE_MANAGER"
+            ;;
+    esac
+}
 
 # Check for required tools
 echo "Checking for required tools..."
@@ -63,14 +163,15 @@ else
 fi
 
 # Check for kubectl
-if ! command -v kubectl &> /dev/null; then
-    echo "kubectl not found. Installing..."
-    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+if ! available kubectl; then
+    status "Installing kubectl..."
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${ARCH}/kubectl"
     chmod +x kubectl
     sudo mv kubectl /usr/local/bin/
-    echo "kubectl installed."
+    available kubectl || error "Failed to install kubectl"
+    status "kubectl installed successfully"
 else
-    echo "kubectl is already installed."
+    status "kubectl already installed"
 fi
 
 # Check for Kubernetes cluster and handle k3s specifically
