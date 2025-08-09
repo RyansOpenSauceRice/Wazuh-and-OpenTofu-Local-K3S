@@ -524,7 +524,7 @@ fi
 
 # Initialize OpenTofu
 echo "Initializing OpenTofu..."
-cd opentofu
+cd "$SCRIPT_DIR/opentofu"
 tofu init
 
 echo
