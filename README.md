@@ -38,58 +38,50 @@ Kubernetes cluster running on Fedora Atomic hypervisor using Kustomize.
 
 ## Quick Start
 
-The easiest way to get started is to use the provided setup script, which will check for and install all required dependencies:
+The easiest way to get started is to use the provided setup script:
 
 ```bash
 # Clone this repository
 git clone https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-Local-K3S.git
 cd Wazuh-and-OpenTofu-Local-K3S
 
-# Make the setup script executable
+# Make the setup script executable and run it
 chmod +x setup.sh
-
-# Interactive setup (recommended for first-time users)
 ./setup.sh
-
-# Or auto-deploy with default credentials
-./setup.sh --auto-deploy
-
-# Or set custom credentials via command line
-./setup.sh --dashboard-user myuser --dashboard-pass mypassword123 \
-           --api-user myapi --api-pass myapipass123 \
-           --indexer-user myindexer --indexer-pass myindexerpass123 \
-           --auto-deploy
 ```
 
-### Credential Configuration
+The script will:
 
-The setup script supports multiple ways to configure Wazuh credentials:
+1. **Install all dependencies** automatically (kubectl, OpenTofu, Git, OpenSSL, K3s)
+2. **Ask for admin credentials** - just username and password
+3. **Deploy everything** - no additional steps needed
+4. **Save your credentials** to a secure file
 
-1. **Interactive prompts** (default): The script will ask if you want custom credentials
-2. **Command-line arguments**: Use `--dashboard-user`, `--dashboard-pass`, etc.
-3. **Auto-generated**: Secure random passwords (default if no custom credentials)
+### Admin Account Setup
 
-### What the Setup Script Does
+When you run the script, you'll see:
 
-1. Check and install required dependencies (kubectl, OpenTofu, Git, OpenSSL)
-2. Configure Wazuh credentials (interactive or via command line)
-3. Set up or detect an existing K3s cluster
-4. Configure kubectl to access your cluster
-5. Clone the Wazuh Kubernetes repository
-6. Initialize OpenTofu
-7. Optionally deploy Wazuh immediately
+```text
+Enter an admin username: myuser
+Enter an admin password: [hidden input]
+Confirm password: [hidden input]
+```
+
+That's it! All other passwords are generated automatically for security.
 
 ### Accessing Your Deployment
 
-After deployment, credentials are saved to `wazuh-credentials.txt` in the terraform directory. To access the dashboard:
+After deployment completes:
 
 ```bash
 # Port-forward the dashboard service
 kubectl port-forward -n wazuh svc/wazuh-dashboard 5601:5601
 
 # Open https://localhost:5601 in your browser
-# Use credentials from wazuh-credentials.txt
+# Log in with your admin credentials
 ```
+
+Your credentials are saved to `wazuh-credentials.txt` for reference.
 
 ## Manual Setup Instructions
 
