@@ -4,14 +4,14 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'terraform/**'
+      - 'opentofu/**'
   pull_request:
     branches: [ main ]
     paths:
-      - 'terraform/**'
+      - 'opentofu/**'
 
 jobs:
-  terraform-lint:
+  opentofu-lint:
     name: OpenTofu Lint
     runs-on: ubuntu-latest
     
@@ -26,17 +26,17 @@ jobs:
         
     - name: Init OpenTofu
       run: |
-        cd terraform
+        cd opentofu
         tofu init -backend=false
         
     - name: Format check
       run: |
-        cd terraform
+        cd opentofu
         tofu fmt -check -recursive
         
     - name: Validate
       run: |
-        cd terraform
+        cd opentofu
         tofu validate
         
     - name: Setup TFLint
@@ -46,5 +46,5 @@ jobs:
         
     - name: Run TFLint
       run: |
-        cd terraform
+        cd opentofu
         tflint --config=../.tflint.hcl
