@@ -35,7 +35,7 @@ variable "environment" {
 variable "wazuh_kustomize_dir" {
   description = "Directory where the Wazuh Kubernetes repository will be cloned"
   type        = string
-  default     = "../wazuh-kubernetes"
+  default     = "../../wazuh-kubernetes"
 }
 
 # Commented out as currently unused - will be used in future versions

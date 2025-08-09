@@ -58,6 +58,10 @@ resource "kubernetes_storage_class" "local_storage" {
   storage_provisioner = "kubernetes.io/no-provisioner"
   volume_binding_mode = "WaitForFirstConsumer"
   reclaim_policy      = "Retain"
+  
+  lifecycle {
+    ignore_changes = [metadata[0].annotations]
+  }
 }
 
 # Generate secure random passwords for Wazuh components
@@ -187,10 +191,18 @@ resource "null_resource" "customize_wazuh_kustomize" {
       echo "Generating certificates for secure Wazuh communication..."
       
       # Generate certificates for Wazuh Indexer (Elasticsearch) cluster
-      cd ${var.wazuh_kustomize_dir}/wazuh/certs/indexer_cluster && ./generate_certs.sh
+      if [ -d "${var.wazuh_kustomize_dir}/wazuh/certs/indexer_cluster" ]; then
+        cd ${var.wazuh_kustomize_dir}/wazuh/certs/indexer_cluster && ./generate_certs.sh
+      else
+        echo "Warning: indexer_cluster certs directory not found, skipping certificate generation"
+      fi
       
       # Generate certificates for Wazuh Dashboard (Kibana) HTTPS
-      cd ${var.wazuh_kustomize_dir}/wazuh/certs/dashboard_http && ./generate_certs.sh
+      if [ -d "${var.wazuh_kustomize_dir}/wazuh/certs/dashboard_http" ]; then
+        cd ${var.wazuh_kustomize_dir}/wazuh/certs/dashboard_http && ./generate_certs.sh
+      else
+        echo "Warning: dashboard_http certs directory not found, skipping certificate generation"
+      fi
       
       echo "Customization completed successfully."
     EOT

@@ -128,7 +128,7 @@ This document provides solutions to common issues encountered when deploying Waz
 1. Update the `variables.tf` file to use the correct kubeconfig path:
 
    ```bash
-   sed -i 's|default     = "/tmp/kubeconfig"|default     = "~/.kube/config"|g' terraform/variables.tf
+   sed -i 's|default     = "/tmp/kubeconfig"|default     = "~/.kube/config"|g' opentofu/variables.tf
    ```
 
 2. Create a symlink to ensure compatibility:
@@ -141,7 +141,7 @@ This document provides solutions to common issues encountered when deploying Waz
 3. Reinitialize OpenTofu with the new configuration:
 
    ```bash
-   cd terraform
+   cd opentofu
    sudo tofu init -reconfigure
    ```
 
@@ -179,7 +179,7 @@ This document provides solutions to common issues encountered when deploying Waz
 2. After installing OpenSSL, rerun the deployment:
 
    ```bash
-   cd terraform
+   cd opentofu
    sudo tofu apply wazuh.plan
    ```
 

@@ -43,7 +43,7 @@ This script automatically fixes common linting errors in the repository.
 #### Lint Fixing Features
 
 - Fixes Markdown linting issues
-- Formats and validates OpenTofu (Terraform) files
+- Formats and validates OpenTofu files
 - Fixes shell script linting issues
 - Installs required tools if they're missing
 
