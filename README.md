@@ -38,35 +38,50 @@ Kubernetes cluster running on Fedora Atomic hypervisor using Kustomize.
 
 ## Quick Start
 
-The easiest way to get started is to use the provided setup script, which will check for and install all required dependencies:
+The easiest way to get started is to use the provided setup script:
 
 ```bash
 # Clone this repository
 git clone https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-Local-K3S.git
 cd Wazuh-and-OpenTofu-Local-K3S
 
-# Make the setup script executable
+# Make the setup script executable and run it
 chmod +x setup.sh
-
-# Run the setup script
 ./setup.sh
 ```
 
-The setup script will:
+The script will:
 
-1. Check and install required dependencies (kubectl, OpenTofu, Git, OpenSSL)
-2. Set up or detect an existing K3s cluster
-3. Configure kubectl to access your cluster
-4. Clone the Wazuh Kubernetes repository
-5. Initialize OpenTofu
+1. **Install all dependencies** automatically (kubectl, OpenTofu, Git, OpenSSL, K3s)
+2. **Ask for admin credentials** - just username and password
+3. **Deploy everything** - no additional steps needed
+4. **Save your credentials** to a secure file
 
-After running the setup script, you can deploy Wazuh:
+### Admin Account Setup
+
+When you run the script, you'll see:
+
+```text
+Enter an admin username: myuser
+Enter an admin password: [hidden input]
+Confirm password: [hidden input]
+```
+
+That's it! All other passwords are generated automatically for security.
+
+### Accessing Your Deployment
+
+After deployment completes:
 
 ```bash
-cd opentofu
-sudo tofu plan -out=wazuh.plan
-sudo tofu apply wazuh.plan
+# Port-forward the dashboard service
+kubectl port-forward -n wazuh svc/wazuh-dashboard 5601:5601
+
+# Open https://localhost:5601 in your browser
+# Log in with your admin credentials
 ```
+
+Your credentials are saved to `wazuh-credentials.txt` for reference.
 
 ## Manual Setup Instructions
 
@@ -202,7 +217,7 @@ Then access the dashboard at: <https://localhost:5601>
 
 ## Troubleshooting
 
-If you encounter any issues during setup or deployment, please refer to the [TROUBLESHOOTING.md](TROUBLESHOOTING.md)  
+If you encounter any issues during setup or deployment, please refer to the [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 guide for common solutions.
 
 ### Utility Scripts
@@ -218,6 +233,7 @@ If you encounter permission issues with OpenTofu or Kubernetes, run:
 ```
 
 This script will:
+
 - Fix permissions on the OpenTofu directory
 - Fix permissions on the kubeconfig file
 - Fix permissions on the Wazuh Kubernetes repository
@@ -231,6 +247,7 @@ To validate your Kubernetes configuration:
 ```
 
 This script checks:
+
 - If kubectl is installed
 - If the Kubernetes cluster is accessible
 - If the necessary resources are available
@@ -244,6 +261,7 @@ The path resolver utility helps with finding and validating paths:
 ```
 
 This script:
+
 - Creates a configuration file if it doesn't exist
 - Validates paths to important directories
 - Resolves the kubeconfig path

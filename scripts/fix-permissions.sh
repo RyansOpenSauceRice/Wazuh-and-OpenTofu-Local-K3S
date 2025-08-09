@@ -6,9 +6,9 @@ set -e
 
 # Script directory (absolute path)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Source path resolver
+# shellcheck source=utils/path_resolver.sh disable=SC1091
 source "${SCRIPT_DIR}/utils/path_resolver.sh"
 
 # Colors for output
@@ -38,8 +38,10 @@ fix_terraform_permissions() {
   print_message "${YELLOW}" "Fixing OpenTofu directory permissions..."
 
   # Get current user and group
-  local user_id=$(id -u)
-  local group_id=$(id -g)
+  local user_id
+  local group_id
+  user_id=$(id -u)
+  group_id=$(id -g)
 
   if check_root; then
     # Running as root, need to get the sudo user
@@ -86,8 +88,10 @@ fix_kubeconfig_permissions() {
   validate_kubeconfig
 
   # Get current user and group
-  local user_id=$(id -u)
-  local group_id=$(id -g)
+  local user_id
+  local group_id
+  user_id=$(id -u)
+  group_id=$(id -g)
 
   if check_root; then
     # Running as root, need to get the sudo user
@@ -124,8 +128,10 @@ fix_wazuh_kubernetes_permissions() {
   print_message "${YELLOW}" "Fixing Wazuh Kubernetes repository permissions..."
 
   # Get current user and group
-  local user_id=$(id -u)
-  local group_id=$(id -g)
+  local user_id
+  local group_id
+  user_id=$(id -u)
+  group_id=$(id -g)
 
   if check_root; then
     # Running as root, need to get the sudo user

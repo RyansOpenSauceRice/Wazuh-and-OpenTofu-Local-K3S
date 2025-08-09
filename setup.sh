@@ -1,49 +1,299 @@
 #!/bin/bash
 
-# Setup script for Wazuh SIEM deployment with OpenTofu and Kustomize on Fedora Atomic
-# Updated with improved error handling and compatibility
+# Setup script for Wazuh SIEM deployment with OpenTofu and Kustomize
+# Officially supports Fedora Atomic, with best-effort support for Fedora, Ubuntu, and RHEL/CentOS/Alma
 
-set -e
+set -eu
 
-echo "=== Wazuh SIEM Deployment Setup ==="
-echo "This script will help you set up the necessary components for deploying Wazuh SIEM."
+# Color output functions
+red="$( (/usr/bin/tput bold || :; /usr/bin/tput setaf 1 || :) 2>&-)"
+green="$( (/usr/bin/tput bold || :; /usr/bin/tput setaf 2 || :) 2>&-)"
+yellow="$( (/usr/bin/tput bold || :; /usr/bin/tput setaf 3 || :) 2>&-)"
+plain="$( (/usr/bin/tput sgr0 || :) 2>&-)"
 
-# Function to detect and use the appropriate package manager
-install_package() {
-    local package_name=$1
-    echo "Installing $package_name..."
+status() { echo "${green}>>> $*${plain}" >&2; }
+error() { echo "${red}ERROR:${plain} $*" >&2; exit 1; }
+warning() { echo "${yellow}WARNING:${plain} $*" >&2; }
 
-    if command -v apt-get &> /dev/null; then
-        sudo apt-get update && sudo apt-get install -y "$package_name"
-    elif command -v dnf &> /dev/null; then
-        sudo dnf install -y "$package_name"
-    elif command -v yum &> /dev/null; then
-        sudo yum install -y "$package_name"
-    elif command -v rpm-ostree &> /dev/null; then
-        sudo rpm-ostree install "$package_name"
-        echo "NOTE: You may need to reboot your system for the rpm-ostree changes to take effect."
-    else
-        echo "WARNING: Could not determine package manager. Please install $package_name manually."
-        return 1
-    fi
+# Cleanup function
+TEMP_DIR=$(mktemp -d)
+cleanup() { rm -rf "$TEMP_DIR"; }
+trap cleanup EXIT
 
-    return 0
+# Help function
+show_help() {
+    cat << EOF
+Wazuh SIEM Deployment Setup Script
+
+USAGE:
+    $0 [OPTIONS]
+
+OPTIONS:
+    -h, --help                    Show this help message
+
+DESCRIPTION:
+    This script will automatically install and deploy Wazuh SIEM with all dependencies.
+    You'll be prompted for an admin username and password - all other credentials
+    are generated automatically for security.
+
+NOTES:
+    - Officially supports Fedora Atomic
+    - Best-effort support for Fedora, Ubuntu, and RHEL/CentOS/Alma
+    - Passwords must be at least 8 characters long
+    - Usernames must contain only letters, numbers, underscores, and hyphens
+EOF
 }
 
-# Check if running on Fedora Atomic
-if [ -f /etc/os-release ]; then
-    # shellcheck source=/dev/null
-    . /etc/os-release
-    echo "Detected OS: $PRETTY_NAME"
-    if [[ "$ID" != "fedora-coreos" && "$ID" != "fedora" ]]; then
-        echo "Warning: This script is designed for Fedora Atomic. You are running $PRETTY_NAME."
-        read -r -p "Do you want to continue anyway? (y/n): " continue_anyway
-        if [[ "$continue_anyway" != "y" && "$continue_anyway" != "Y" ]]; then
-            echo "Exiting."
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
             exit 1
+            ;;
+    esac
+done
+
+status "Wazuh SIEM Deployment Setup"
+echo "This script will install and configure all necessary components for deploying Wazuh SIEM."
+
+# Check if tools are available
+available() { command -v "$1" >/dev/null 2>&1; }
+
+# Check for required basic tools upfront
+require() {
+    local MISSING=''
+    for TOOL in "$@"; do
+        if ! available "$TOOL"; then
+            MISSING="$MISSING $TOOL"
         fi
-    fi
+    done
+    echo "$MISSING"
+}
+
+# Function to prompt for credentials
+prompt_credentials() {
+    echo
+    status "Admin Account Setup"
+    echo "Please create an admin account for your Wazuh SIEM deployment."
+    echo "All other system passwords will be generated automatically for security."
+    echo
+    
+    # Get admin username
+    while true; do
+        echo -n "Enter an admin username: "
+        read -r ADMIN_USERNAME
+        if [ -n "$ADMIN_USERNAME" ] && [[ "$ADMIN_USERNAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+            break
+        else
+            echo "Username must contain only letters, numbers, underscores, and hyphens."
+        fi
+    done
+    
+    # Get admin password
+    while true; do
+        echo -n "Enter an admin password: "
+        read -rs ADMIN_PASSWORD
+        echo
+        if [ ${#ADMIN_PASSWORD} -ge 8 ]; then
+            echo -n "Confirm password: "
+            read -rs ADMIN_PASSWORD_CONFIRM
+            echo
+            if [ "$ADMIN_PASSWORD" = "$ADMIN_PASSWORD_CONFIRM" ]; then
+                break
+            else
+                echo "Passwords do not match. Please try again."
+            fi
+        else
+            echo "Password must be at least 8 characters long."
+        fi
+    done
+    
+    echo
+    status "Admin account configured: $ADMIN_USERNAME"
+    echo "All other system passwords will be generated automatically."
+    echo
+}
+
+# Function to create credential secrets
+create_credential_secrets() {
+    local namespace="$1"
+    
+    status "Creating credential secrets"
+    
+    # Generate secure random passwords for system components
+    local AUTHD_PASSWORD
+    local API_PASSWORD
+    local INDEXER_PASSWORD
+    
+    AUTHD_PASSWORD="$(openssl rand -base64 16)"
+    API_PASSWORD="$(openssl rand -base64 16)"
+    INDEXER_PASSWORD="$(openssl rand -base64 16)"
+    
+    # Create secrets - admin account uses user-provided credentials, others are auto-generated
+    kubectl -n "$namespace" create secret generic wazuh-authd-pass-secret \
+        --from-literal=password="$AUTHD_PASSWORD" &> /dev/null || true
+        
+    kubectl -n "$namespace" create secret generic wazuh-api-cred-secret \
+        --from-literal=username="wazuh-api" \
+        --from-literal=password="$API_PASSWORD" &> /dev/null || true
+        
+    kubectl -n "$namespace" create secret generic indexer-cred-secret \
+        --from-literal=username="$ADMIN_USERNAME" \
+        --from-literal=password="$INDEXER_PASSWORD" &> /dev/null || true
+        
+    kubectl -n "$namespace" create secret generic dashboard-cred-secret \
+        --from-literal=username="$ADMIN_USERNAME" \
+        --from-literal=password="$ADMIN_PASSWORD" &> /dev/null || true
+}
+
+# Function to save credentials to file
+save_credentials() {
+    local creds_file="$1"
+    
+    status "Saving credentials to $creds_file"
+    
+    cat > "$creds_file" << EOF
+# Wazuh SIEM Access Information
+# Generated on $(date)
+
+=== Wazuh Dashboard ===
+URL: https://localhost:5601
+Username: $ADMIN_USERNAME
+Password: $ADMIN_PASSWORD
+
+=== Access Instructions ===
+1. Port-forward the dashboard service:
+   kubectl port-forward -n wazuh svc/wazuh-dashboard 5601:5601
+
+2. Open your browser and go to: https://localhost:5601
+
+3. Log in with the admin credentials above
+
+Note: Keep this file secure and do not commit it to version control.
+All other system passwords are auto-generated and managed internally.
+EOF
+    
+    chmod 600 "$creds_file"
+    echo "Credentials saved to: $creds_file"
+}
+
+# Verify we're on Linux
+[ "$(uname -s)" = "Linux" ] || error 'This script is intended to run on Linux only.'
+
+# Check architecture (for kubectl download)
+ARCH=$(uname -m)
+case "$ARCH" in
+    x86_64) ARCH="amd64" ;;
+    aarch64|arm64) ARCH="arm64" ;;
+    *) warning "Architecture $ARCH may not be fully supported" ;;
+esac
+
+# Check for basic system tools
+NEEDS=$(require curl)
+if [ -n "$NEEDS" ]; then
+    error "The following basic tools are required but missing:$NEEDS"
 fi
+
+# Configure credentials
+prompt_credentials
+
+# Detect OS and package manager
+if [ ! -f "/etc/os-release" ]; then
+    error "Cannot detect operating system."
+fi
+
+# shellcheck source=/etc/os-release disable=SC1091
+. /etc/os-release
+status "Detected OS: $PRETTY_NAME (Architecture: $ARCH)"
+
+# Officially supported: Fedora Atomic/CoreOS
+# Best effort support: Fedora, Ubuntu, RHEL/CentOS/Alma
+PACKAGE_MANAGER=""
+OFFICIALLY_SUPPORTED=false
+
+case "$ID" in
+    fedora-coreos)
+        status "Fedora Atomic/CoreOS detected - OFFICIALLY SUPPORTED"
+        PACKAGE_MANAGER="rpm-ostree"
+        OFFICIALLY_SUPPORTED=true
+        warning "Some packages may require a reboot with rpm-ostree."
+        ;;
+    fedora)
+        if [ "${VARIANT_ID:-}" = "coreos" ] 2>/dev/null; then
+            status "Fedora CoreOS detected - OFFICIALLY SUPPORTED"
+            PACKAGE_MANAGER="rpm-ostree"
+            OFFICIALLY_SUPPORTED=true
+        else
+            status "Fedora Desktop detected - BEST EFFORT SUPPORT"
+            PACKAGE_MANAGER="dnf"
+        fi
+        ;;
+    ubuntu|debian)
+        warning "Ubuntu/Debian detected - BEST EFFORT SUPPORT"
+        warning "This project is officially designed for Fedora Atomic."
+        PACKAGE_MANAGER="apt-get"
+        ;;
+    centos|rhel|almalinux|rocky)
+        warning "RHEL/CentOS/Alma detected - BEST EFFORT SUPPORT"
+        warning "This project is officially designed for Fedora Atomic."
+        if available dnf; then
+            PACKAGE_MANAGER="dnf"
+        elif available yum; then
+            PACKAGE_MANAGER="yum"
+        else
+            error "No supported package manager found."
+        fi
+        ;;
+    *)
+        error "Unsupported OS: $PRETTY_NAME. This project officially supports Fedora Atomic only."
+        ;;
+esac
+
+if [ "$OFFICIALLY_SUPPORTED" = false ]; then
+    echo ""
+    warning "IMPORTANT: This OS is not officially supported."
+    warning "Official support is only provided for Fedora Atomic/CoreOS."
+    warning "Continuing with best-effort support..."
+    echo ""
+    read -r -p "Continue anyway? (y/N): " continue_anyway
+    case "$continue_anyway" in
+        [Yy]*) status "Proceeding with best-effort support..." ;;
+        *) error "Installation cancelled. Please use Fedora Atomic for official support." ;;
+    esac
+fi
+
+status "Using package manager: $PACKAGE_MANAGER"
+
+# Enhanced package installation function
+install_package() {
+    local package_name="$1"
+    status "Installing $package_name..."
+
+    case "$PACKAGE_MANAGER" in
+        apt-get)
+            sudo apt-get update -qq && sudo apt-get install -y "$package_name"
+            ;;
+        dnf)
+            sudo dnf install -y "$package_name"
+            ;;
+        yum)
+            sudo yum install -y "$package_name"
+            ;;
+        rpm-ostree)
+            sudo rpm-ostree install "$package_name"
+            warning "You may need to reboot for rpm-ostree changes to take effect."
+            ;;
+        *)
+            error "Unsupported package manager: $PACKAGE_MANAGER"
+            ;;
+    esac
+}
 
 # Check for required tools
 echo "Checking for required tools..."
@@ -63,14 +313,15 @@ else
 fi
 
 # Check for kubectl
-if ! command -v kubectl &> /dev/null; then
-    echo "kubectl not found. Installing..."
-    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+if ! available kubectl; then
+    status "Installing kubectl..."
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${ARCH}/kubectl"
     chmod +x kubectl
     sudo mv kubectl /usr/local/bin/
-    echo "kubectl installed."
+    available kubectl || error "Failed to install kubectl"
+    status "kubectl installed successfully"
 else
-    echo "kubectl is already installed."
+    status "kubectl already installed"
 fi
 
 # Check for Kubernetes cluster and handle k3s specifically
@@ -276,13 +527,52 @@ echo "Initializing OpenTofu..."
 cd terraform
 tofu init
 
-echo "Setup complete! You can now deploy Wazuh SIEM using OpenTofu."
-echo "To deploy, run the following commands:"
-echo "  cd terraform"
-echo "  tofu plan -out=wazuh.plan"
-echo "  tofu apply wazuh.plan"
-echo ""
-echo "After deployment, run 'tofu output access_instructions' to get access information."
+echo
+status "Setup complete! All dependencies are installed."
+
+# Deploy Wazuh SIEM automatically
+echo
+status "Deploying Wazuh SIEM..."
+
+# Create namespace if it doesn't exist
+WAZUH_NAMESPACE="wazuh"
+kubectl create namespace "$WAZUH_NAMESPACE" &> /dev/null || true
+
+# Create credential secrets
+create_credential_secrets "$WAZUH_NAMESPACE"
+
+# Run OpenTofu deployment
+status "Running OpenTofu plan..."
+if tofu plan -out=wazuh.plan; then
+    status "Applying OpenTofu configuration..."
+    if tofu apply wazuh.plan; then
+        status "Deployment successful!"
+        
+        # Save credentials to file
+        CREDS_FILE="$(pwd)/wazuh-credentials.txt"
+        save_credentials "$CREDS_FILE"
+        
+        echo
+        status "🎉 Wazuh SIEM Deployment Complete!"
+        echo
+        echo "📋 Your admin credentials:"
+        echo "   Username: $ADMIN_USERNAME"
+        echo "   Password: [saved to $CREDS_FILE]"
+        echo
+        echo "🌐 To access the dashboard:"
+        echo "   1. Run: kubectl port-forward -n wazuh svc/wazuh-dashboard 5601:5601"
+        echo "   2. Open: https://localhost:5601"
+        echo "   3. Log in with your admin credentials"
+        echo
+        echo "📄 Full credentials saved to: $CREDS_FILE"
+        
+    else
+        error "OpenTofu apply failed. Check the output above for details."
+    fi
+else
+    error "OpenTofu plan failed. Check the output above for details."
+fi
+
 echo ""
 echo "TROUBLESHOOTING:"
 echo "  If you encounter permission issues with kubectl, try using 'sudo kubectl' commands."
