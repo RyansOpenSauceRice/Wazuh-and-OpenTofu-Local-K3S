@@ -11,7 +11,7 @@
 
 ## Overview
 
-This document outlines the specifications for deploying Wazuh SIEM using OpenTofu (formerly Terraform) and Kubernetes  
+This document outlines the specifications for deploying Wazuh SIEM using OpenTofu and Kubernetes  
 on a Fedora Atomic hypervisor. The deployment is designed for local environments, not cloud-based deployments.
 
 > **Note**: While the original plan was to use Helm charts for deployment, research shows that the official Wazuh  

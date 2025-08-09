@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0.en.html)
 [![Docs](https://img.shields.io/badge/docs-green?style=for-the-badge)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-Local-K3S/tree/main/docs)
 
-This repository contains OpenTofu (formerly Terraform) configurations to deploy Wazuh SIEM on a local
+This repository contains OpenTofu configurations to deploy Wazuh SIEM on a local
 Kubernetes cluster running on Fedora Atomic hypervisor using Kustomize.
 
 ## Prerequisites
@@ -18,7 +18,7 @@ Kubernetes cluster running on Fedora Atomic hypervisor using Kustomize.
 - Kubernetes cluster (K3s recommended for local deployments)
 - OpenSSL for certificate generation
 - Git for repository cloning
-- OpenTofu (formerly Terraform) for infrastructure as code
+- OpenTofu for infrastructure as code
 
 ## Repository Structure
 
@@ -26,7 +26,7 @@ Kubernetes cluster running on Fedora Atomic hypervisor using Kustomize.
 .
 ├── docs/
 │   └── specifications.md       # Detailed specifications document
-├── terraform/
+├── opentofu/
 │   ├── main.tf                 # Main OpenTofu configuration
 │   ├── variables.tf            # Variables definition
 │   └── outputs.tf              # Output definitions
@@ -63,7 +63,7 @@ The setup script will:
 After running the setup script, you can deploy Wazuh:
 
 ```bash
-cd terraform
+cd opentofu
 sudo tofu plan -out=wazuh.plan
 sudo tofu apply wazuh.plan
 ```
@@ -154,7 +154,7 @@ git clone https://github.com/wazuh/wazuh-kubernetes.git
 ### 1. Initialize OpenTofu
 
 ```bash
-cd terraform
+cd opentofu
 sudo tofu init
 ```
 
@@ -259,15 +259,15 @@ Common issues include:
 
 You can customize the deployment by modifying the following files:
 
-- `terraform/variables.tf`: Adjust variables like resource limits, namespace, etc.
-- `terraform/main.tf`: Customize the Kustomize configuration
+- `opentofu/variables.tf`: Adjust variables like resource limits, namespace, etc.
+- `opentofu/main.tf`: Customize the Kustomize configuration
 
 ## Cleanup
 
 To remove the Wazuh deployment:
 
 ```bash
-cd terraform
+cd opentofu
 sudo tofu destroy
 ```
 
@@ -282,7 +282,7 @@ For detailed specifications and architecture information, see [specifications.md
 This repository uses automated linting for:
 
 - Markdown files
-- OpenTofu (Terraform) files
+- OpenTofu files
 - Shell scripts
 
 To fix linting errors locally before committing, run:

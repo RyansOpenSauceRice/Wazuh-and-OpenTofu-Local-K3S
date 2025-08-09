@@ -90,7 +90,7 @@ display_troubleshooting 1 "kubernetes"
 - `handle_error(error_code, error_message, recovery_function)`: Handles an error
 - `display_troubleshooting(error_code, component)`: Displays troubleshooting information
 - `recover_kubernetes_access()`: Attempts to recover Kubernetes access
-- `recover_terraform_state()`: Attempts to recover OpenTofu state
+- `recover_opentofu_state()`: Attempts to recover OpenTofu state
 - `recover_wazuh_deployment()`: Attempts to recover Wazuh deployment
 
 ## Configuration
@@ -112,7 +112,7 @@ WAZUH_NAMESPACE="wazuh"
 # Repository Paths
 WAZUH_KUBERNETES_REPO="/path/to/wazuh-kubernetes"
 WAZUH_KUBERNETES_VERSION="v4.5.0"  # Pin to specific version
-TERRAFORM_DIR="/path/to/terraform"
+OPENTOFU_DIR="/path/to/terraform"
 SCRIPTS_DIR="/path/to/scripts"
 
 # Deployment Configuration
