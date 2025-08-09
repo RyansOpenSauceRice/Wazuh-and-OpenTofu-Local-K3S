@@ -362,7 +362,7 @@ if ! kubectl cluster-info &> /dev/null; then
         chmod 600 ~/.kube/config
         export KUBECONFIG=~/.kube/config
 
-        # Create a symlink to /tmp/kubeconfig for compatibility with the Terraform config
+        # Create a symlink to /tmp/kubeconfig for compatibility with the OpenTofu config
         sudo mkdir -p /tmp
         sudo ln -sf ~/.kube/config /tmp/kubeconfig
 
@@ -416,7 +416,7 @@ EOF
             chmod 600 ~/.kube/config
             export KUBECONFIG=~/.kube/config
 
-            # Create a symlink to /tmp/kubeconfig for compatibility with the Terraform config
+            # Create a symlink to /tmp/kubeconfig for compatibility with the OpenTofu config
             sudo mkdir -p /tmp
             sudo ln -sf ~/.kube/config /tmp/kubeconfig
 
@@ -437,8 +437,8 @@ EOF
 else
     echo "Kubernetes cluster is accessible."
 
-    # Create a symlink to /tmp/kubeconfig for compatibility with the Terraform config
-    echo "Creating symlink to kubeconfig for Terraform compatibility..."
+    # Create a symlink to /tmp/kubeconfig for compatibility with the OpenTofu config
+    echo "Creating symlink to kubeconfig for OpenTofu compatibility..."
     sudo mkdir -p /tmp
     sudo ln -sf ~/.kube/config /tmp/kubeconfig
 fi
@@ -502,10 +502,10 @@ else
     cd ../wazuh-kubernetes && git pull && cd -
 fi
 
-# Update Terraform variables to use the correct kubeconfig path
-echo "Updating Terraform configuration to use the correct kubeconfig path..."
+# Update OpenTofu variables to use the correct kubeconfig path
+echo "Updating OpenTofu configuration to use the correct kubeconfig path..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VARIABLES_FILE="$SCRIPT_DIR/terraform/variables.tf"
+VARIABLES_FILE="$SCRIPT_DIR/opentofu/variables.tf"
 
 if [ -f "$VARIABLES_FILE" ]; then
     # Backup the original file
@@ -524,7 +524,7 @@ fi
 
 # Initialize OpenTofu
 echo "Initializing OpenTofu..."
-cd terraform
+cd opentofu
 tofu init
 
 echo
