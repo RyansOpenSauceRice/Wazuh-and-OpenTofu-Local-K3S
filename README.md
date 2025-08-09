@@ -4,7 +4,7 @@
 [![IaC](https://img.shields.io/badge/IaC-OpenTofu-844FBA?style=for-the-badge&logo=terraform)](https://opentofu.org/)
 [![Orchestration](https://img.shields.io/badge/orchestration-Kubernetes-326CE5?style=for-the-badge&logo=kubernetes)](https://kubernetes.io/)
 [![Config](https://img.shields.io/badge/config-Kustomize-3970E4?style=for-the-badge&logo=kubernetes)](https://kustomize.io/)
-[![Platform](https://img.shields.io/badge/platform-Fedora%20Atomic-294172?style=for-the-badge&logo=fedora)](https://fedoraproject.org/atomic/)
+[![Platform](https://img.shields.io/badge/platform-Fedora%20Atomic-294172?style=for-the-badge&logo=fedora)](https://fedoraproject.org/atomic-desktops/)
 [![Status](https://img.shields.io/badge/status-development-yellow?style=for-the-badge&logo=github)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-Local-K3S)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0.en.html)
 [![Docs](https://img.shields.io/badge/docs-green?style=for-the-badge)](https://github.com/RyansOpenSauceRice/Wazuh-and-OpenTofu-Local-K3S/tree/main/docs)
