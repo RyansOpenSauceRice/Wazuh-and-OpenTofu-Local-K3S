@@ -202,7 +202,7 @@ Then access the dashboard at: <https://localhost:5601>
 
 ## Troubleshooting
 
-If you encounter any issues during setup or deployment, please refer to the [TROUBLESHOOTING.md](TROUBLESHOOTING.md)  
+If you encounter any issues during setup or deployment, please refer to the [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 guide for common solutions.
 
 ### Utility Scripts
@@ -218,6 +218,7 @@ If you encounter permission issues with OpenTofu or Kubernetes, run:
 ```
 
 This script will:
+
 - Fix permissions on the OpenTofu directory
 - Fix permissions on the kubeconfig file
 - Fix permissions on the Wazuh Kubernetes repository
@@ -231,6 +232,7 @@ To validate your Kubernetes configuration:
 ```
 
 This script checks:
+
 - If kubectl is installed
 - If the Kubernetes cluster is accessible
 - If the necessary resources are available
@@ -244,6 +246,7 @@ The path resolver utility helps with finding and validating paths:
 ```
 
 This script:
+
 - Creates a configuration file if it doesn't exist
 - Validates paths to important directories
 - Resolves the kubeconfig path

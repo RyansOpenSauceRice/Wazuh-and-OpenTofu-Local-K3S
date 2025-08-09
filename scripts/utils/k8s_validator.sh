@@ -11,7 +11,7 @@ export REPO_ROOT
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Source path resolver
-# shellcheck source=./path_resolver.sh
+# shellcheck source=./path_resolver.sh disable=SC1091
 source "${SCRIPT_DIR}/path_resolver.sh"
 
 # Colors for output

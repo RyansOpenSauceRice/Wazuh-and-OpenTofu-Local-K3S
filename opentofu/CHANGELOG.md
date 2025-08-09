@@ -1,21 +1,25 @@
 ## 1.8.1
 
 BUG FIXES:
+
 * Fixed crash when module source is not present ([#1888](https://github.com/opentofu/opentofu/pull/1888))
 
 ## 1.8.0
 
 UPGRADE NOTES:
+
 * BREAKING CHANGE - `use_legacy_workflow` field has been removing from the S3 backend configuration. ([#1730](https://github.com/opentofu/opentofu/pull/1730))
 * SECURITY - Bump github.com/hashicorp/go-getter to fix CVE-2024-6257, may cause performance hit for large modules ([#1751](https://github.com/opentofu/opentofu/pull/1751))
 
 NEW FEATURES:
+
 * Added support for `override_resource`, `override_data` and `override_module` blocks in testing framework. ([#1499](https://github.com/opentofu/opentofu/pull/1499))
 * Variables and Locals allowed in module sources and backend configurations (with limitations) ([#1718](https://github.com/opentofu/opentofu/pull/1718))
 * Added support to new .tofu extensions to allow tofu-specific overrides of .tf files ([#1738](https://github.com/opentofu/opentofu/pull/1738))
 * Added support for `mock_provider`, `mock_resource` and `mock_data` blocks in testing framework. ([#1772](https://github.com/opentofu/opentofu/pull/1772))
 
 ENHANCEMENTS:
+
 * Added `tofu test -json` types to website Machine-Readable UI documentation. ([#1408](https://github.com/opentofu/opentofu/issues/1408))
 * Made `tofu plan` with `generate-config-out` flag replace JSON strings with `jsonencode` functions calls. ([#1595](https://github.com/opentofu/opentofu/pull/1595))
 * Make state persistence interval configurable via `TF_STATE_PERSIST_INTERVAL` environment variable ([#1591](https://github.com/opentofu/opentofu/pull/1591))
@@ -25,6 +29,7 @@ ENHANCEMENTS:
 * Included provider function in `tofu providers schema` command ([#1753](https://github.com/opentofu/opentofu/pull/1753))
 
 BUG FIXES:
+
 * Fixed validation for `enforced` flag in encryption configuration. ([#1711](https://github.com/opentofu/opentofu/pull/1711))
 * Fixed crash in gcs backend when using certain commands. ([#1618](https://github.com/opentofu/opentofu/pull/1618))
 * Fixed inmem backend crash due to missing struct field. ([#1619](https://github.com/opentofu/opentofu/pull/1619))
@@ -45,5 +50,5 @@ BUG FIXES:
 
 For information on prior major and minor releases, see their changelogs:
 
-- [v1.7](https://github.com/opentofu/opentofu/blob/v1.7/CHANGELOG.md)
-- [v1.6](https://github.com/opentofu/opentofu/blob/v1.6/CHANGELOG.md)
+* [v1.7](https://github.com/opentofu/opentofu/blob/v1.7/CHANGELOG.md)
+* [v1.6](https://github.com/opentofu/opentofu/blob/v1.6/CHANGELOG.md)

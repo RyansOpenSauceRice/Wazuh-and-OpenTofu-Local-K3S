@@ -58,7 +58,7 @@ resource "kubernetes_storage_class" "local_storage" {
   storage_provisioner = "kubernetes.io/no-provisioner"
   volume_binding_mode = "WaitForFirstConsumer"
   reclaim_policy      = "Retain"
-  
+
   lifecycle {
     ignore_changes = [metadata[0].annotations]
   }

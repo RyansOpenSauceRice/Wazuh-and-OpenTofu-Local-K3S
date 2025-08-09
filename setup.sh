@@ -29,7 +29,7 @@ available() { command -v "$1" >/dev/null 2>&1; }
 # Check for required basic tools upfront
 require() {
     local MISSING=''
-    for TOOL in $*; do
+    for TOOL in "$@"; do
         if ! available "$TOOL"; then
             MISSING="$MISSING $TOOL"
         fi
@@ -59,6 +59,7 @@ if [ ! -f "/etc/os-release" ]; then
     error "Cannot detect operating system."
 fi
 
+# shellcheck source=/etc/os-release disable=SC1091
 . /etc/os-release
 status "Detected OS: $PRETTY_NAME (Architecture: $ARCH)"
 

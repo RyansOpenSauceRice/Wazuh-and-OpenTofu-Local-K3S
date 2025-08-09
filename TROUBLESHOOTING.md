@@ -44,9 +44,9 @@ This document provides solutions to common issues encountered when deploying Waz
 
 **Symptoms:**
 
-- Error message: "Unable to read /etc/rancher/k3s/k3s.yaml, please start server with --write-kubeconfig-mode or  
+- Error message: "Unable to read /etc/rancher/k3s/k3s.yaml, please start server with --write-kubeconfig-mode or
   --write-kubeconfig-group to modify kube config permissions"
-- Error message: "error: error loading config file "/etc/rancher/k3s/k3s.yaml": open /etc/rancher/k3s/k3s.yaml:  
+- Error message: "error: error loading config file "/etc/rancher/k3s/k3s.yaml": open /etc/rancher/k3s/k3s.yaml:
   permission denied"
 
 **Solutions:**
@@ -240,7 +240,7 @@ This document provides solutions to common issues encountered when deploying Waz
    sudo systemctl reboot
    ```
 
-3. For container-based systems, you might need to use the container's package manager or build a custom container with  
+3. For container-based systems, you might need to use the container's package manager or build a custom container with
    the required packages.
 
 ## Still Having Issues?
