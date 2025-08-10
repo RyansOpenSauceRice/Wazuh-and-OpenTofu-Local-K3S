@@ -36,6 +36,31 @@ Kubernetes cluster running on Fedora Atomic hypervisor using Kustomize.
 └── README.md                   # This file
 ```
 
+## Platform Support
+
+- **🟢 Official Support:** Fedora Atomic/CoreOS
+- **🟡 Best-Effort Support:** Fedora Desktop, Ubuntu, RHEL/CentOS/Alma
+- **Architecture:** amd64, arm64 (auto-detected)
+
+## CI/CD Pipeline
+
+The project uses GitHub Actions for automated testing:
+
+- **Markdown Lint** - `.github/workflows/markdown-lint.yml`
+- **Shell Lint** - `.github/workflows/shell-lint.yml`
+- **OpenTofu Lint** - `.github/workflows/opentofu-lint.yml`
+
+**Note:** TFLint works seamlessly with OpenTofu configurations since they share the same HCL syntax.
+
+## Credential Management
+
+The setup script uses a simplified approach:
+
+- **User Input:** Only admin username and password
+- **Auto-Generated:** All system passwords (API, cluster keys, etc.)
+- **Security:** Uses OpenSSL for cryptographically secure password generation
+- **Storage:** Credentials saved to local file (excluded from git)
+
 ## Quick Start
 
 The easiest way to get started is to use the provided setup script:
