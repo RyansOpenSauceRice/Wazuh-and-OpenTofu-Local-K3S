@@ -183,6 +183,62 @@ EOF
     echo "Credentials saved to: $creds_file"
 }
 
+# Function to check for existing Wazuh resources and clean them up
+check_existing_resources() {
+    status "Checking for existing Wazuh resources..."
+    
+    # Check and clean up existing namespace
+    if kubectl get namespace wazuh >/dev/null 2>&1; then
+        warning "Existing Wazuh namespace found. Cleaning up..."
+        kubectl delete namespace wazuh --timeout=60s
+        local retries=0
+        while kubectl get namespace wazuh >/dev/null 2>&1 && [ $retries -lt 20 ]; do
+            echo "Waiting for namespace deletion... ($((retries + 1))/20)"
+            sleep 3
+            retries=$((retries + 1))
+        done
+        
+        if kubectl get namespace wazuh >/dev/null 2>&1; then
+            error "Failed to delete existing Wazuh namespace. Please run: kubectl delete namespace wazuh --force"
+        fi
+        status "Existing namespace cleaned up successfully"
+    fi
+    
+    # Check and clean up storage class
+    if kubectl get storageclass wazuh-local-storage >/dev/null 2>&1; then
+        warning "Existing Wazuh storage class found. Cleaning up..."
+        kubectl delete storageclass wazuh-local-storage
+        status "Existing storage class cleaned up successfully"
+    fi
+    
+    # Clean OpenTofu state if resources don't match cluster state
+    if [ -f "opentofu/terraform.tfstate" ] && ! kubectl get namespace wazuh >/dev/null 2>&1; then
+        warning "OpenTofu state out of sync with cluster. Cleaning state..."
+        rm -f opentofu/terraform.tfstate*
+        rm -f opentofu/wazuh.plan
+        status "OpenTofu state cleaned up successfully"
+    fi
+}
+
+# Function to validate K3s cluster health
+validate_k3s_health() {
+    status "Validating K3s cluster health..."
+    
+    # Wait for K3s to be fully ready
+    local retries=0
+    while [ $retries -lt 30 ]; do
+        if kubectl get nodes --no-headers 2>/dev/null | grep -q "Ready"; then
+            status "K3s cluster is healthy and ready"
+            return 0
+        fi
+        echo "Waiting for K3s to be ready... ($((retries + 1))/30)"
+        sleep 2
+        retries=$((retries + 1))
+    done
+    
+    error "K3s cluster not ready after 60 seconds. Please check: sudo systemctl status k3s"
+}
+
 # Verify we're on Linux
 [ "$(uname -s)" = "Linux" ] || error 'This script is intended to run on Linux only.'
 
@@ -443,6 +499,9 @@ else
     sudo ln -sf ~/.kube/config /tmp/kubeconfig
 fi
 
+# Validate K3s cluster health
+validate_k3s_health
+
 # Check for kustomize
 if ! kubectl kustomize --help &> /dev/null; then
     echo "Kustomize not found in kubectl. Checking standalone installation..."
@@ -533,6 +592,9 @@ status "Setup complete! All dependencies are installed."
 # Deploy Wazuh SIEM automatically
 echo
 status "Deploying Wazuh SIEM..."
+
+# Check for existing resources and clean them up
+check_existing_resources
 
 # Create namespace if it doesn't exist
 WAZUH_NAMESPACE="wazuh"
