@@ -14,6 +14,7 @@ plain="$( (/usr/bin/tput sgr0 || :) 2>&-)"
 status() { echo "${green}>>> $*${plain}" >&2; }
 error() { echo "${red}ERROR:${plain} $*" >&2; exit 1; }
 warning() { echo "${yellow}WARNING:${plain} $*" >&2; }
+success() { echo "${green}$*${plain}" >&2; }
 
 # Cleanup function
 TEMP_DIR=$(mktemp -d)
@@ -187,37 +188,118 @@ EOF
 check_existing_resources() {
     status "Checking for existing Wazuh resources..."
     
-    # Check and clean up existing namespace
+    # Check and clean up existing namespace with enhanced handling
     if kubectl get namespace wazuh >/dev/null 2>&1; then
-        warning "Existing Wazuh namespace found. Cleaning up..."
-        kubectl delete namespace wazuh --timeout=60s
+        warning "Existing Wazuh namespace found. Initiating cleanup..."
+        
+        # Check if namespace is stuck in Terminating state
+        local ns_status
+        ns_status=$(kubectl get namespace wazuh -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+        if [ "$ns_status" = "Terminating" ]; then
+            warning "Namespace is stuck in Terminating state. Attempting to force cleanup..."
+            # Remove finalizers that might be blocking deletion
+            kubectl patch namespace wazuh -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+        fi
+        
+        # Attempt graceful deletion first
+        kubectl delete namespace wazuh --timeout=30s 2>/dev/null || {
+            warning "Graceful deletion failed. Attempting force deletion..."
+            kubectl delete namespace wazuh --force --grace-period=0 2>/dev/null || true
+        }
+        
+        # Enhanced waiting with clear progress indicators
         local retries=0
-        while kubectl get namespace wazuh >/dev/null 2>&1 && [ $retries -lt 20 ]; do
-            echo "Waiting for namespace deletion... ($((retries + 1))/20)"
-            sleep 3
+        local max_retries=40  # 2 minutes total (40 * 3 seconds)
+        local wait_time=3
+        
+        while kubectl get namespace wazuh >/dev/null 2>&1 && [ $retries -lt $max_retries ]; do
+            local elapsed=$((retries * wait_time))
+            local remaining=$(((max_retries - retries) * wait_time))
+            
+            if [ $((retries % 10)) -eq 0 ] || [ $retries -lt 5 ]; then
+                echo "⏳ Waiting for namespace cleanup to complete... (${elapsed}s elapsed, ~${remaining}s remaining)"
+            else
+                echo "   Still waiting... ($((retries + 1))/${max_retries})"
+            fi
+            
+            sleep $wait_time
             retries=$((retries + 1))
+            
+            # Try additional cleanup methods if stuck
+            if [ $retries -eq 15 ]; then
+                warning "Namespace deletion taking longer than expected. Trying additional cleanup..."
+                kubectl patch namespace wazuh -p '{"spec":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+            fi
+            
+            if [ $retries -eq 25 ]; then
+                warning "Attempting to remove any remaining finalizers..."
+                kubectl patch namespace wazuh -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+            fi
         done
         
+        # Final verification
         if kubectl get namespace wazuh >/dev/null 2>&1; then
-            error "Failed to delete existing Wazuh namespace. Please run: kubectl delete namespace wazuh --force"
+            echo "${red}ERROR:${plain} ❌ Failed to delete existing Wazuh namespace after 2 minutes." >&2
+            echo "${red}ERROR:${plain}    This may indicate stuck resources or finalizers." >&2
+            echo "${red}ERROR:${plain}    Manual cleanup required:" >&2
+            echo "${red}ERROR:${plain}    1. kubectl delete namespace wazuh --force --grace-period=0" >&2
+            echo "${red}ERROR:${plain}    2. kubectl patch namespace wazuh -p '{\"metadata\":{\"finalizers\":[]}}' --type=merge" >&2
+            echo "${red}ERROR:${plain}    3. Re-run this script" >&2
+            exit 1
         fi
-        status "Existing namespace cleaned up successfully"
+        
+        success "✅ Existing namespace cleaned up successfully"
+        echo "   Waiting 5 seconds for cluster state to stabilize..."
+        sleep 5
     fi
     
-    # Check and clean up storage class
+    # Check and clean up storage class with better error handling
     if kubectl get storageclass wazuh-local-storage >/dev/null 2>&1; then
         warning "Existing Wazuh storage class found. Cleaning up..."
-        kubectl delete storageclass wazuh-local-storage
-        status "Existing storage class cleaned up successfully"
+        if kubectl delete storageclass wazuh-local-storage --timeout=30s; then
+            success "✅ Existing storage class cleaned up successfully"
+        else
+            warning "Storage class deletion failed, attempting force cleanup..."
+            kubectl delete storageclass wazuh-local-storage --force --grace-period=0 2>/dev/null || true
+            sleep 2
+            if kubectl get storageclass wazuh-local-storage >/dev/null 2>&1; then
+                error "❌ Failed to delete storage class. Manual cleanup may be required."
+            else
+                success "✅ Storage class force-deleted successfully"
+            fi
+        fi
     fi
     
-    # Clean OpenTofu state if resources don't match cluster state
-    if [ -f "opentofu/terraform.tfstate" ] && ! kubectl get namespace wazuh >/dev/null 2>&1; then
-        warning "OpenTofu state out of sync with cluster. Cleaning state..."
-        rm -f opentofu/terraform.tfstate*
-        rm -f opentofu/wazuh.plan
-        status "OpenTofu state cleaned up successfully"
+    # Enhanced OpenTofu state cleanup
+    if [ -f "opentofu/terraform.tfstate" ]; then
+        # Check if state is out of sync with actual cluster state
+        local state_has_namespace
+        local cluster_has_namespace
+        state_has_namespace=$(grep -q '"name": "wazuh"' opentofu/terraform.tfstate 2>/dev/null && echo "true" || echo "false")
+        cluster_has_namespace=$(kubectl get namespace wazuh >/dev/null 2>&1 && echo "true" || echo "false")
+        
+        if [ "$state_has_namespace" = "true" ] && [ "$cluster_has_namespace" = "false" ]; then
+            warning "OpenTofu state out of sync with cluster. Cleaning state files..."
+            rm -f opentofu/terraform.tfstate*
+            rm -f opentofu/wazuh.plan
+            rm -f opentofu/.terraform.lock.hcl
+            success "✅ OpenTofu state cleaned up successfully"
+        fi
     fi
+    
+    # Final verification before proceeding
+    echo "🔍 Performing final verification..."
+    if kubectl get namespace wazuh >/dev/null 2>&1; then
+        echo "${red}ERROR:${plain} ❌ Namespace still exists after cleanup. This should not happen." >&2
+        echo "${red}ERROR:${plain}    Please report this issue and run manual cleanup." >&2
+        exit 1
+    fi
+    
+    if kubectl get storageclass wazuh-local-storage >/dev/null 2>&1; then
+        warning "⚠️  Storage class still exists but will be recreated."
+    fi
+    
+    success "✅ Resource cleanup verification complete. Ready for deployment."
 }
 
 # Function to validate K3s cluster health
