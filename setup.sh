@@ -249,8 +249,25 @@ check_existing_resources() {
         fi
         
         success "✅ Existing namespace cleaned up successfully"
-        echo "   Waiting 5 seconds for cluster state to stabilize..."
-        sleep 5
+        echo "   Waiting 10 seconds for cluster state to stabilize..."
+        sleep 10
+        
+        # CRITICAL: Double-check namespace is completely gone before proceeding
+        local final_check_retries=0
+        while kubectl get namespace wazuh >/dev/null 2>&1 && [ $final_check_retries -lt 10 ]; do
+            echo "⚠️  Namespace still exists after cleanup. Waiting additional 3 seconds..."
+            sleep 3
+            final_check_retries=$((final_check_retries + 1))
+        done
+        
+        if kubectl get namespace wazuh >/dev/null 2>&1; then
+            echo "${red}ERROR:${plain} ❌ Namespace still exists after extended cleanup!" >&2
+            echo "${red}ERROR:${plain} Current namespace status:" >&2
+            kubectl get namespace wazuh -o yaml 2>/dev/null || echo "Failed to get namespace details"
+            exit 1
+        fi
+        
+        echo "✅ Final verification: Namespace completely removed"
     fi
     
     # Check and clean up storage class with better error handling
