@@ -193,7 +193,8 @@ check_existing_resources() {
         warning "Existing Wazuh namespace found. Initiating cleanup..."
         
         # Check if namespace is stuck in Terminating state
-        local ns_status=$(kubectl get namespace wazuh -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+        local ns_status
+        ns_status=$(kubectl get namespace wazuh -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
         if [ "$ns_status" = "Terminating" ]; then
             warning "Namespace is stuck in Terminating state. Attempting to force cleanup..."
             # Remove finalizers that might be blocking deletion
@@ -238,12 +239,12 @@ check_existing_resources() {
         
         # Final verification
         if kubectl get namespace wazuh >/dev/null 2>&1; then
-            error "❌ Failed to delete existing Wazuh namespace after 2 minutes."
-            error "   This may indicate stuck resources or finalizers."
-            error "   Manual cleanup required:"
-            error "   1. kubectl delete namespace wazuh --force --grace-period=0"
-            error "   2. kubectl patch namespace wazuh -p '{\"metadata\":{\"finalizers\":[]}}' --type=merge"
-            error "   3. Re-run this script"
+            echo "${red}ERROR:${plain} ❌ Failed to delete existing Wazuh namespace after 2 minutes." >&2
+            echo "${red}ERROR:${plain}    This may indicate stuck resources or finalizers." >&2
+            echo "${red}ERROR:${plain}    Manual cleanup required:" >&2
+            echo "${red}ERROR:${plain}    1. kubectl delete namespace wazuh --force --grace-period=0" >&2
+            echo "${red}ERROR:${plain}    2. kubectl patch namespace wazuh -p '{\"metadata\":{\"finalizers\":[]}}' --type=merge" >&2
+            echo "${red}ERROR:${plain}    3. Re-run this script" >&2
             exit 1
         fi
         
@@ -272,8 +273,10 @@ check_existing_resources() {
     # Enhanced OpenTofu state cleanup
     if [ -f "opentofu/terraform.tfstate" ]; then
         # Check if state is out of sync with actual cluster state
-        local state_has_namespace=$(grep -q '"name": "wazuh"' opentofu/terraform.tfstate 2>/dev/null && echo "true" || echo "false")
-        local cluster_has_namespace=$(kubectl get namespace wazuh >/dev/null 2>&1 && echo "true" || echo "false")
+        local state_has_namespace
+        local cluster_has_namespace
+        state_has_namespace=$(grep -q '"name": "wazuh"' opentofu/terraform.tfstate 2>/dev/null && echo "true" || echo "false")
+        cluster_has_namespace=$(kubectl get namespace wazuh >/dev/null 2>&1 && echo "true" || echo "false")
         
         if [ "$state_has_namespace" = "true" ] && [ "$cluster_has_namespace" = "false" ]; then
             warning "OpenTofu state out of sync with cluster. Cleaning state files..."
@@ -287,8 +290,8 @@ check_existing_resources() {
     # Final verification before proceeding
     echo "🔍 Performing final verification..."
     if kubectl get namespace wazuh >/dev/null 2>&1; then
-        error "❌ Namespace still exists after cleanup. This should not happen."
-        error "   Please report this issue and run manual cleanup."
+        echo "${red}ERROR:${plain} ❌ Namespace still exists after cleanup. This should not happen." >&2
+        echo "${red}ERROR:${plain}    Please report this issue and run manual cleanup." >&2
         exit 1
     fi
     
